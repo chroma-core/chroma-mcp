@@ -24,7 +24,7 @@ parser.add_argument('--host',
 parser.add_argument('--port', 
                    help='Chroma port (optional for http client)', 
                    default=os.getenv('CHROMA_PORT'))
-parser.add_arguent('--custom-auth-credentials',
+parser.add_argument('--custom-auth-credentials',
                    help='Custom auth credentials (optional for http client)', 
                    default=os.getenv('CHROMA_CUSTOM_AUTH_CREDENTIALS'))
 parser.add_argument('--tenant', 
