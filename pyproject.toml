@@ -34,7 +34,7 @@ build-backend = "hatchling.build"
 chroma-mcp = "chroma_mcp:main"
 
 [tool.hatch.build]
-packages = ["src"]
+packages = ["src/chroma_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
