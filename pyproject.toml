@@ -1,6 +1,6 @@
 [project]
 name = "chroma-mcp"
-version = "0.1.10"
+version = "0.1.11"
 description = "Chroma MCP Server - Vector Database Integration for LLM Applications"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,9 +32,6 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 chroma-mcp = "chroma_mcp:main"
-
-[tool.hatch.build]
-packages = ["src/chroma_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

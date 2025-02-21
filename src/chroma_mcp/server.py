@@ -7,101 +7,101 @@ import argparse
 from chromadb.config import Settings
 
 
-
-
-# Initialize argument parser
-parser = argparse.ArgumentParser(description='FastMCP server for Chroma DB')
-parser.add_argument('--client-type', 
-                   choices=['http', 'cloud', 'persistent', 'ephemeral'],
-                   default=os.getenv('CHROMA_CLIENT_TYPE', 'ephemeral'),
-                   help='Type of Chroma client to use')
-parser.add_argument('--data-dir',
-                   default=os.getenv('CHROMA_DATA_DIR'),
-                   help='Directory for persistent client data (only used with persistent client)')
-parser.add_argument('--host', 
-                   help='Chroma host (required for http client)', 
-                   default=os.getenv('CHROMA_HOST'))
-parser.add_argument('--port', 
-                   help='Chroma port (optional for http client)', 
-                   default=os.getenv('CHROMA_PORT'))
-parser.add_argument('--custom-auth-credentials',
-                   help='Custom auth credentials (optional for http client)', 
-                   default=os.getenv('CHROMA_CUSTOM_AUTH_CREDENTIALS'))
-parser.add_argument('--tenant', 
-                   help='Chroma tenant (optional for http client)', 
-                   default=os.getenv('CHROMA_TENANT'))
-parser.add_argument('--database', 
-                   help='Chroma database (required if tenant is provided)', 
-                   default=os.getenv('CHROMA_DATABASE'))
-parser.add_argument('--api-key', 
-                   help='Chroma API key (required if tenant is provided)', 
-                   default=os.getenv('CHROMA_API_KEY'))
-parser.add_argument('--ssl', 
-                   help='Use SSL (optional for http client)', 
-                   type=bool, 
-                   default=os.getenv('CHROMA_SSL', 'true').lower() == 'true')
-parser.add_argument('--dotenv-path', 
-                   help='Path to .chroma_env file', 
-                   default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
-
-
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
 
 # Global variables
 _chroma_client = None
-_args = None
 
-def get_chroma_client():
+def create_parser():
+    """Create and return the argument parser."""
+    parser = argparse.ArgumentParser(description='FastMCP server for Chroma DB')
+    parser.add_argument('--client-type', 
+                       choices=['http', 'cloud', 'persistent', 'ephemeral'],
+                       default=os.getenv('CHROMA_CLIENT_TYPE', 'ephemeral'),
+                       help='Type of Chroma client to use')
+    parser.add_argument('--data-dir',
+                       default=os.getenv('CHROMA_DATA_DIR'),
+                       help='Directory for persistent client data (only used with persistent client)')
+    parser.add_argument('--host', 
+                       help='Chroma host (required for http client)', 
+                       default=os.getenv('CHROMA_HOST'))
+    parser.add_argument('--port', 
+                       help='Chroma port (optional for http client)', 
+                       default=os.getenv('CHROMA_PORT'))
+    parser.add_argument('--custom-auth-credentials',
+                       help='Custom auth credentials (optional for http client)', 
+                       default=os.getenv('CHROMA_CUSTOM_AUTH_CREDENTIALS'))
+    parser.add_argument('--tenant', 
+                       help='Chroma tenant (optional for http client)', 
+                       default=os.getenv('CHROMA_TENANT'))
+    parser.add_argument('--database', 
+                       help='Chroma database (required if tenant is provided)', 
+                       default=os.getenv('CHROMA_DATABASE'))
+    parser.add_argument('--api-key', 
+                       help='Chroma API key (required if tenant is provided)', 
+                       default=os.getenv('CHROMA_API_KEY'))
+    parser.add_argument('--ssl', 
+                       help='Use SSL (optional for http client)', 
+                       type=bool, 
+                       default=os.getenv('CHROMA_SSL', 'true').lower() == 'true')
+    parser.add_argument('--dotenv-path', 
+                       help='Path to .chroma_env file', 
+                       default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
+    return parser
+
+def get_chroma_client(args=None):
     """Get or create the global Chroma client instance."""
-    global _chroma_client, _args
+    global _chroma_client
     if _chroma_client is None:
-        if _args is None:
-            _args = parser.parse_args()
+        if args is None:
+            # Create parser and parse args if not provided
+            parser = create_parser()
+            args = parser.parse_args()
         
         # Load environment variables from .env file if it exists
-        load_dotenv(dotenv_path=_args.dotenv_path)
-
-        if _args.client_type == 'http':
-            if not _args.host:
+        load_dotenv(dotenv_path=args.dotenv_path)
+        
+        if args.client_type == 'http':
+            if not args.host:
                 raise ValueError("Host must be provided via --host flag or CHROMA_HOST environment variable when using HTTP client")
             
             settings = Settings()
-            if _args.custom_auth_credentials:
+            if args.custom_auth_credentials:
                 settings = Settings(
                     chroma_client_auth_provider="chromadb.auth.basic_authn.BasicAuthClientProvider",
-                    chroma_client_auth_credentials=_args.custom_auth_credentials
+                    chroma_client_auth_credentials=args.custom_auth_credentials
                 )
             
             _chroma_client = chromadb.HttpClient(
-                host=_args.host,
-                port=_args.port if _args.port else None,
-                ssl=_args.ssl,
+                host=args.host,
+                port=args.port if args.port else None,
+                ssl=args.ssl,
                 settings=settings
             )
             
-        elif _args.client_type == 'cloud':
-            if not _args.tenant:
+        elif args.client_type == 'cloud':
+            if not args.tenant:
                 raise ValueError("Tenant must be provided via --tenant flag or CHROMA_TENANT environment variable when using cloud client")
-            if not _args.database:
+            if not args.database:
                 raise ValueError("Database must be provided via --database flag or CHROMA_DATABASE environment variable when using cloud client")
-            if not _args.api_key:
+            if not args.api_key:
                 raise ValueError("API key must be provided via --api-key flag or CHROMA_API_KEY environment variable when using cloud client")
             
             _chroma_client = chromadb.HttpClient(
                 host="api.trychroma.com",
                 ssl=True,  # Always use SSL for cloud
-                tenant=_args.tenant,
-                database=_args.database,
+                tenant=args.tenant,
+                database=args.database,
                 headers={
-                    'x-chroma-token': _args.api_key
+                    'x-chroma-token': args.api_key
                 }
             )
                 
-        elif _args.client_type == 'persistent':
-            if not _args.data_dir:
+        elif args.client_type == 'persistent':
+            if not args.data_dir:
                 raise ValueError("Data directory must be provided via --data-dir flag when using persistent client")
-            _chroma_client = chromadb.PersistentClient(path=_args.data_dir)
+            _chroma_client = chromadb.PersistentClient(path=args.data_dir)
         else:  # ephemeral
             _chroma_client = chromadb.EphemeralClient()
             
@@ -377,21 +377,27 @@ async def get_documents(
 
 def main():
     """Entry point for the Chroma MCP server."""
-    global _args
-    _args = parser.parse_args()
+    parser = create_parser()
+    args = parser.parse_args()
     
     # Validate required arguments based on client type
-    if _args.client_type == 'http':
-        if not _args.host:
+    if args.client_type == 'http':
+        if not args.host:
             parser.error("Host must be provided via --host flag or CHROMA_HOST environment variable when using HTTP client")
     
-    elif _args.client_type == 'cloud':
-        if not _args.tenant:
+    elif args.client_type == 'cloud':
+        if not args.tenant:
             parser.error("Tenant must be provided via --tenant flag or CHROMA_TENANT environment variable when using cloud client")
-        if not _args.database:
+        if not args.database:
             parser.error("Database must be provided via --database flag or CHROMA_DATABASE environment variable when using cloud client")
-        if not _args.api_key:
+        if not args.api_key:
             parser.error("API key must be provided via --api-key flag or CHROMA_API_KEY environment variable when using cloud client")
+    
+    # Initialize client with parsed args
+    get_chroma_client(args)
     
     # Initialize and run the server
     mcp.run(transport='stdio')
+    
+if __name__ == "__main__":
+    main()
