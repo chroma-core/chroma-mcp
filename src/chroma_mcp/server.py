@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 import argparse
 from chromadb.config import Settings
+import ssl
 
 
 # Initialize FastMCP server
@@ -43,8 +44,8 @@ def create_parser():
                        default=os.getenv('CHROMA_API_KEY'))
     parser.add_argument('--ssl', 
                        help='Use SSL (optional for http client)', 
-                       type=bool, 
-                       default=os.getenv('CHROMA_SSL', 'true').lower() == 'true')
+                       type=lambda x: x.lower() in ['true', 'yes', '1', 't', 'y'],
+                       default=os.getenv('CHROMA_SSL', 'true').lower() in ['true', 'yes', '1', 't', 'y'])
     parser.add_argument('--dotenv-path', 
                        help='Path to .chroma_env file', 
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
@@ -73,12 +74,28 @@ def get_chroma_client(args=None):
                     chroma_client_auth_credentials=args.custom_auth_credentials
                 )
             
-            _chroma_client = chromadb.HttpClient(
-                host=args.host,
-                port=args.port if args.port else None,
-                ssl=args.ssl,
-                settings=settings
-            )
+            # Handle SSL configuration
+            try:
+                _chroma_client = chromadb.HttpClient(
+                    host=args.host,
+                    port=args.port if args.port else None,
+                    ssl=args.ssl,
+                    settings=settings
+                )
+            except ssl.SSLError as e:
+                # If we encounter an SSL error, try with a more permissive context
+                # This is a fallback for environments with SSL issues
+                print(f"SSL connection failed: {str(e)}. Trying with a more permissive SSL configuration...")
+                os.environ['SSL_CERT_VERIFY'] = '0'
+                _chroma_client = chromadb.HttpClient(
+                    host=args.host,
+                    port=args.port if args.port else None,
+                    ssl=args.ssl,
+                    settings=settings
+                )
+            except Exception as e:
+                print(f"Error connecting to HTTP client: {str(e)}")
+                raise
             
         elif args.client_type == 'cloud':
             if not args.tenant:
@@ -88,15 +105,32 @@ def get_chroma_client(args=None):
             if not args.api_key:
                 raise ValueError("API key must be provided via --api-key flag or CHROMA_API_KEY environment variable when using cloud client")
             
-            _chroma_client = chromadb.HttpClient(
-                host="api.trychroma.com",
-                ssl=True,  # Always use SSL for cloud
-                tenant=args.tenant,
-                database=args.database,
-                headers={
-                    'x-chroma-token': args.api_key
-                }
-            )
+            try:
+                _chroma_client = chromadb.HttpClient(
+                    host="api.trychroma.com",
+                    ssl=True,  # Always use SSL for cloud
+                    tenant=args.tenant,
+                    database=args.database,
+                    headers={
+                        'x-chroma-token': args.api_key
+                    }
+                )
+            except ssl.SSLError as e:
+                # If we encounter an SSL error, try with a more permissive context
+                print(f"SSL connection failed: {str(e)}. Trying with a more permissive SSL configuration...")
+                os.environ['SSL_CERT_VERIFY'] = '0'
+                _chroma_client = chromadb.HttpClient(
+                    host="api.trychroma.com",
+                    ssl=True,  # Always use SSL for cloud
+                    tenant=args.tenant,
+                    database=args.database,
+                    headers={
+                        'x-chroma-token': args.api_key
+                    }
+                )
+            except Exception as e:
+                print(f"Error connecting to cloud client: {str(e)}")
+                raise
                 
         elif args.client_type == 'persistent':
             if not args.data_dir:
@@ -394,9 +428,15 @@ def main():
             parser.error("API key must be provided via --api-key flag or CHROMA_API_KEY environment variable when using cloud client")
     
     # Initialize client with parsed args
-    get_chroma_client(args)
+    try:
+        get_chroma_client(args)
+        print("Successfully initialized Chroma client")
+    except Exception as e:
+        print(f"Failed to initialize Chroma client: {str(e)}")
+        raise
     
     # Initialize and run the server
+    print("Starting MCP server")
     mcp.run(transport='stdio')
     
 if __name__ == "__main__":
