@@ -83,16 +83,8 @@ def get_chroma_client(args=None):
                     settings=settings
                 )
             except ssl.SSLError as e:
-                # If we encounter an SSL error, try with a more permissive context
-                # This is a fallback for environments with SSL issues
-                print(f"SSL connection failed: {str(e)}. Trying with a more permissive SSL configuration...")
-                os.environ['SSL_CERT_VERIFY'] = '0'
-                _chroma_client = chromadb.HttpClient(
-                    host=args.host,
-                    port=args.port if args.port else None,
-                    ssl=args.ssl,
-                    settings=settings
-                )
+                print(f"SSL connection failed: {str(e)}")
+                raise
             except Exception as e:
                 print(f"Error connecting to HTTP client: {str(e)}")
                 raise
@@ -116,18 +108,8 @@ def get_chroma_client(args=None):
                     }
                 )
             except ssl.SSLError as e:
-                # If we encounter an SSL error, try with a more permissive context
-                print(f"SSL connection failed: {str(e)}. Trying with a more permissive SSL configuration...")
-                os.environ['SSL_CERT_VERIFY'] = '0'
-                _chroma_client = chromadb.HttpClient(
-                    host="api.trychroma.com",
-                    ssl=True,  # Always use SSL for cloud
-                    tenant=args.tenant,
-                    database=args.database,
-                    headers={
-                        'x-chroma-token': args.api_key
-                    }
-                )
+                print(f"SSL connection failed: {str(e)}")
+                raise
             except Exception as e:
                 print(f"Error connecting to cloud client: {str(e)}")
                 raise
