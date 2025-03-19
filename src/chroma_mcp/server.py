@@ -400,6 +400,8 @@ class SequentialThinking:
     
     def validate_thought_data(self, input_data: Dict) -> Dict:
         """Validate thought data structure."""
+        if not input_data.get("sessionId"):
+            raise ValueError("Invalid sessionId: must be provided")
         if not input_data.get("thought") or not isinstance(input_data.get("thought"), str):
             raise ValueError("Invalid thought: must be a string")
         if not input_data.get("thoughtNumber") or not isinstance(input_data.get("thoughtNumber"), int):
@@ -410,6 +412,7 @@ class SequentialThinking:
             raise ValueError("Invalid nextThoughtNeeded: must be a boolean")
         
         return {
+            "sessionId": input_data.get("sessionId"),
             "thought": input_data.get("thought"),
             "thoughtNumber": input_data.get("thoughtNumber"),
             "totalThoughts": input_data.get("totalThoughts"),
@@ -473,6 +476,7 @@ Thought: {thought}
             
             # Return response
             return {
+                "sessionId": validated_input["sessionId"],
                 "thoughtNumber": validated_input["thoughtNumber"],
                 "totalThoughts": validated_input["totalThoughts"],
                 "nextThoughtNeeded": validated_input["nextThoughtNeeded"],
@@ -521,7 +525,7 @@ async def sequentialthinking(
     Each thought can build on, question, or revise previous insights as understanding deepens.
     
     Args:
-        thought: Your current thinking step, which can include:
+        thought: Keep this under 5000 bytes. It is your current thinking step, which can include:
             * Regular analytical steps
             * Revisions of previous thoughts
             * Questions about previous decisions
