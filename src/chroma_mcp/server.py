@@ -692,6 +692,31 @@ async def chroma_sequential_thinking(
     return processed_thought
 
 @mcp.tool()
+async def chroma_get_similar_sessions(
+    text: str,
+) -> Dict:
+    """Retrieve the thought history for a specific session.
+    
+    Args:
+        text: The text to search for
+    
+    Returns:
+        Dictionary with the thought history
+    """
+    client = get_chroma_client()
+    thoughts_collection = client.get_collection("sequential_thinking_summary")
+    
+    # Query for similar sessions
+    results = thoughts_collection.query(
+        query_texts=[text],
+        n_results=5,
+        include=["documents", "metadatas"]
+    )
+    
+    return results
+
+
+@mcp.tool()
 async def chroma_get_thought_history(
     sessionId: str,
 ) -> Dict:
