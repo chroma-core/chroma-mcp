@@ -33,7 +33,7 @@ def test_get_chroma_client_ephemeral():
 @pytest.mark.asyncio
 async def test_list_collections():
     # Test list_collections tool
-    result = await mcp.call_tool("list_collections", {"limit": None, "offset": None})
+    result = await mcp.call_tool("chroma_list_collections", {"limit": None, "offset": None})
     assert isinstance(result, list)
 
 @pytest.mark.asyncio
@@ -42,12 +42,12 @@ async def test_create_and_delete_collection():
     collection_name = "test_collection"
     
     # Create collection
-    create_result = await mcp.call_tool("create_collection", {"collection_name": collection_name})
+    create_result = await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
     assert len(create_result) == 1  # Should return a list with one TextContent
     assert "Successfully created collection" in create_result[0].text
     
     # Delete collection
-    delete_result = await mcp.call_tool("delete_collection", {"collection_name": collection_name})
+    delete_result = await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
     assert len(delete_result) == 1  # Should return a list with one TextContent
     assert "Successfully deleted collection" in delete_result[0].text
 
