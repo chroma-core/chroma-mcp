@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import argparse
 from chromadb.config import Settings
 import ssl
+import uuid
 
 
 # Initialize FastMCP server
@@ -390,6 +391,379 @@ async def get_documents(
         limit=limit,
         offset=offset
     )
+    
+# Sequential Thinking Data Structure
+class SequentialThinking:
+    def __init__(self):
+        self.thought_history = []
+        self.branches = {}
+    
+    def validate_thought_data(self, input_data: Dict) -> Dict:
+        """Validate thought data structure."""
+        if not input_data.get("thought") or not isinstance(input_data.get("thought"), str):
+            raise ValueError("Invalid thought: must be a string")
+        if not input_data.get("thoughtNumber") or not isinstance(input_data.get("thoughtNumber"), int):
+            raise ValueError("Invalid thoughtNumber: must be a number")
+        if not input_data.get("totalThoughts") or not isinstance(input_data.get("totalThoughts"), int):
+            raise ValueError("Invalid totalThoughts: must be a number")
+        if not isinstance(input_data.get("nextThoughtNeeded"), bool):
+            raise ValueError("Invalid nextThoughtNeeded: must be a boolean")
+        
+        return {
+            "thought": input_data.get("thought"),
+            "thoughtNumber": input_data.get("thoughtNumber"),
+            "totalThoughts": input_data.get("totalThoughts"),
+            "nextThoughtNeeded": input_data.get("nextThoughtNeeded"),
+            "isRevision": input_data.get("isRevision"),
+            "revisesThought": input_data.get("revisesThought"),
+            "branchFromThought": input_data.get("branchFromThought"),
+            "branchId": input_data.get("branchId"),
+            "needsMoreThoughts": input_data.get("needsMoreThoughts"),
+        }
+    
+    def format_thought(self, thought_data: Dict) -> str:
+        """Format thought for display."""
+        thought_number = thought_data.get("thoughtNumber")
+        total_thoughts = thought_data.get("totalThoughts")
+        thought = thought_data.get("thought")
+        is_revision = thought_data.get("isRevision")
+        revises_thought = thought_data.get("revisesThought")
+        branch_from_thought = thought_data.get("branchFromThought")
+        branch_id = thought_data.get("branchId")
+        
+        if is_revision:
+            prefix = 'Revision'
+            context = f" (revising thought {revises_thought})"
+        elif branch_from_thought:
+            prefix = 'Branch'
+            context = f" (from thought {branch_from_thought}, ID: {branch_id})"
+        else:
+            prefix = 'Thought'
+            context = ""
+            
+        header = f"{prefix} {thought_number}/{total_thoughts}{context}"
+        
+        return f"""
+Header: {header}
+Thought: {thought}
+"""
+    
+    def process_thought(self, input_data: Dict) -> Dict:
+        """Process a new thought."""
+        try:
+            # Validate input data
+            validated_input = self.validate_thought_data(input_data)
+            
+            # Adjust total thoughts if needed
+            if validated_input["thoughtNumber"] > validated_input["totalThoughts"]:
+                validated_input["totalThoughts"] = validated_input["thoughtNumber"]
+            
+            # Add to thought history
+            self.thought_history.append(validated_input)
+            
+            # Handle branching
+            if validated_input.get("branchFromThought") and validated_input.get("branchId"):
+                if validated_input["branchId"] not in self.branches:
+                    self.branches[validated_input["branchId"]] = []
+                self.branches[validated_input["branchId"]].append(validated_input)
+            
+            # Format for display (console output)
+            formatted_thought = self.format_thought(validated_input)
+            print(formatted_thought)  # For logging/debugging
+            
+            # Return response
+            return {
+                "thoughtNumber": validated_input["thoughtNumber"],
+                "totalThoughts": validated_input["totalThoughts"],
+                "nextThoughtNeeded": validated_input["nextThoughtNeeded"],
+                "branches": list(self.branches.keys()),
+                "thoughtHistoryLength": len(self.thought_history)
+            }
+            
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+# Create a singleton instance to manage state
+sequential_thinking = SequentialThinking()
+
+# Initialize persistence
+def init_thinking_collections(client):
+    """Initialize collections needed for sequential thinking."""
+    # Main collection for thought history
+    return client.get_or_create_collection(
+        name="sequential_thinking",
+    ), client.get_or_create_collection(
+        name="sequential_thinking_branches",
+    )
+    
+# Add these functions to your existing MCP server
+
+@mcp.tool()
+async def sequentialthinking(
+    thought: str,
+    thoughtNumber: int,
+    totalThoughts: int,
+    nextThoughtNeeded: bool,
+    sessionId: Optional[str] = None,
+    isRevision: Optional[bool] = None,
+    revisesThought: Optional[int] = None,
+    branchFromThought: Optional[int] = None,
+    branchId: Optional[str] = None,
+    needsMoreThoughts: Optional[bool] = None,
+    persist: bool = True
+) -> Dict:
+    """A detailed tool for dynamic and reflective problem-solving through thoughts.
+    
+    This tool helps analyze problems through a flexible thinking process that can adapt and evolve.
+    Each thought can build on, question, or revise previous insights as understanding deepens.
+    
+    Args:
+        thought: Your current thinking step, which can include:
+            * Regular analytical steps
+            * Revisions of previous thoughts
+            * Questions about previous decisions
+            * Realizations about needing more analysis
+            * Changes in approach
+            * Hypothesis generation
+            * Hypothesis verification
+        thoughtNumber: Current thought number
+            * The current number in sequence (can go beyond initial total if needed)
+        totalThoughts: Estimated total thoughts needed
+            * Current estimate of thoughts needed (can be adjusted up/down)
+        sessionId: Identifier for the thinking session. Provide if this is not the first thought in the session.
+            * A unique identifier for the current thinking session
+        nextThoughtNeeded: Whether another thought step is needed
+            * True if you need more thinking, even if at what seemed like the end
+        isRevision: Whether this revises previous thinking
+            * A boolean indicating if this thought revises previous thinking
+        revisesThought: Which thought is being reconsidered
+            * If isRevision is true, which thought number is being reconsidered
+        branchFromThought: Branching point thought number
+            * If branching, which thought number is the branching point
+        branchId: Branch identifier
+            * Identifier for the current branch (if any)
+        needsMoreThoughts: If more thoughts are needed
+            * If reaching end but realizing more thoughts needed
+        persist: Whether to persist thoughts in the Chroma database
+        
+        You should:
+        1. Start with an initial estimate of needed thoughts, but be ready to adjust
+        2. Feel free to question or revise previous thoughts
+        3. Don't hesitate to add more thoughts if needed, even at the "end"
+        4. Express uncertainty when present
+        5. Mark thoughts that revise previous thinking or branch into new paths
+        6. Ignore information that is irrelevant to the current step
+        7. Generate a solution hypothesis when appropriate
+        8. Verify the hypothesis based on the Chain of Thought steps
+        9. Repeat the process until satisfied with the solution
+        10. Provide a single, ideally correct answer as the final output
+        11. Only set next_thought_needed to false when truly done and a satisfactory answer is reached`,
+    
+    Returns:
+        Dictionary with thought metadata
+    """
+    # Generate session ID if not provided
+    if not sessionId:
+        sessionId = str(uuid.uuid4())[:8]
+    
+    # Generate branch ID if branching but no ID provided
+    if branchFromThought and not branchId:
+        branchId = str(uuid.uuid4())[:8]
+    
+    # Structure input data
+    input_data = {
+        "sessionId": sessionId,
+        "thought": thought,
+        "thoughtNumber": thoughtNumber,
+        "totalThoughts": totalThoughts,
+        "nextThoughtNeeded": nextThoughtNeeded,
+        "isRevision": isRevision,
+        "revisesThought": revisesThought,
+        "branchFromThought": branchFromThought,
+        "branchId": branchId,
+        "needsMoreThoughts": needsMoreThoughts,
+    }
+    
+    # Process the thought
+    result = sequential_thinking.process_thought(input_data)
+    
+    if persist:
+        client = get_chroma_client()
+        thoughts_collection, branches_collection = init_thinking_collections(client)
+        
+        # Store the thought
+        thought_id = f"{sessionId}_{thoughtNumber}"
+        if branchId:
+            thought_id = f"{thought_id}_{branchId}"
+        
+        # Add metadata
+        metadata = {
+            "sid": sessionId,
+            "tn": thoughtNumber,
+            "tt": totalThoughts,
+            "isR": bool(isRevision),
+            "rt": revisesThought if revisesThought else -1,
+            "bf": branchFromThought if branchFromThought else -1,
+            "bid": branchId if branchId else "",
+            "ntn": nextThoughtNeeded,
+        }
+        
+        # Store in Chroma
+        thoughts_collection.add(
+            documents=[thought],
+            metadatas=[metadata],
+            ids=[thought_id]
+        )
+        
+        # Add branch relationship if applicable
+        if branchFromThought and branchId:
+            branch_metadata = {
+                "sid": sessionId,
+                "pt": branchFromThought,
+                "bid": branchId,
+            }
+            
+            branches_collection.add(
+                documents=[f"Branch from thought {branchFromThought} in session {sessionId}"],
+                metadatas=[branch_metadata],
+                ids=[f"branch_{branchId}"]
+            )
+        
+        # Add persistence info to result
+        result["persistedId"] = thought_id
+    
+    # Return processed result as JSON
+    return result
+
+@mcp.tool()
+async def get_thought_history(
+    sessionId: str,
+) -> Dict:
+    """Retrieve the thought history for a specific session.
+    
+    Args:
+        sessionId: The session identifier
+    
+    Returns:
+        Dictionary with the thought history
+    """
+    client = get_chroma_client()
+    thoughts_collection = client.get_collection("sequential_thinking")
+    
+    # Query for thoughts in this session
+    results = thoughts_collection.get(
+        where={"sid": sessionId},
+        include=["documents", "metadatas"]
+    )
+    
+    # Sort by thought number
+    thoughts = []
+    for i, doc in enumerate(results["documents"]):
+        metadata = results["metadatas"][i]
+        thoughts.append({
+            "thought": doc,
+            "metadata": metadata
+        })
+    
+    # Sort thoughts by number
+    thoughts.sort(key=lambda x: x["metadata"]["tn"])
+    
+    return {
+        "sessionId": sessionId,
+        "thoughts": thoughts,
+        "totalThoughts": len(thoughts)
+    }
+
+@mcp.tool()
+async def get_thought_branches(sessionId: str) -> Dict:
+    """Get all branches for a specific thinking session.
+    
+    Args:
+        sessionId: The session identifier
+    
+    Returns:
+        Dictionary with branch information
+    """
+    client = get_chroma_client()
+    branches_collection = client.get_collection("sequential_thinking_branches")
+    
+    # Query for branches in this session
+    results = branches_collection.get(
+        where={"sid": sessionId},
+        include=["metadatas"]
+    )
+    
+    branches = []
+    for metadata in results["metadatas"]:
+        branches.append({
+            "branchId": metadata["bid"],
+            "parentThought": metadata["pt"]
+        })
+    
+    return {
+        "sessionId": sessionId,
+        "branches": branches,
+        "totalBranches": len(branches)
+    }
+
+@mcp.tool()
+async def continue_thought_chain(
+    sessionId: str,
+    branchId: Optional[str] = None
+) -> Dict:
+    """Get the latest state of a thought chain to continue it.
+    
+    Args:
+        sessionId: The session identifier
+        branchId: Optional branch identifier to continue a specific branch
+    
+    Returns:
+        Dictionary with the latest state of the thought chain
+    """
+    client = get_chroma_client()
+    thoughts_collection = client.get_collection("sequential_thinking")
+    
+    # Build query
+    where_clause = {"sid": sessionId}
+    if branchId:
+        where_clause["branchId"] = branchId
+    
+    # Get all thoughts in the chain
+    results = thoughts_collection.get(
+        where=where_clause,
+        include=["documents", "metadatas"]
+    )
+    
+    if not results["documents"]:
+        return {
+            "error": f"No thoughts found for session {sessionId}" + (f" and branch {branchId}" if branchId else ""),
+            "status": "failed"
+        }
+    
+    # Find the highest thought number
+    max_thought_num = 0
+    latest_thought = None
+    for i, metadata in enumerate(results["metadatas"]):
+        if metadata["tn"] > max_thought_num:
+            max_thought_num = metadata["tn"]
+            latest_thought = {
+                "thought": results["documents"][i],
+                "metadata": metadata
+            }
+    
+    # Return state to continue from
+    return {
+        "sessionId": sessionId,
+        "latestThought": latest_thought["thought"],
+        "thoughtNumber": latest_thought["metadata"]["tn"],
+        "totalThoughts": latest_thought["metadata"]["tt"],
+        "nextThoughtNumber": latest_thought["metadata"]["tn"] + 1,
+        "branchId": branchId if branchId else latest_thought["metadata"].get("bid", ""),
+        "nextThoughtNeeded": latest_thought["metadata"]["ntn"]
+    }
 
 def main():
     """Entry point for the Chroma MCP server."""

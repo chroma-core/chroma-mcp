@@ -1,6 +1,6 @@
 [project]
 name = "chroma-mcp"
-version = "0.1.13"
+version = "0.1.14"
 description = "Chroma MCP Server - Vector Database Integration for LLM Applications"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,7 @@ dependencies = [
     "chromadb>=0.6.3",
     "mcp[cli]>=1.2.1",
     "python-dotenv>=0.19.0",
+    "yachalk>=0.1.7",
 ]
 
 [project.urls]
