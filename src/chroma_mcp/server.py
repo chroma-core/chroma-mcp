@@ -8,7 +8,7 @@ from chromadb.config import Settings
 import ssl
 import uuid
 import time
-
+import json
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
@@ -495,7 +495,7 @@ def find_similar_sessions(thoughts_collection, summary_collection, thought, simi
                     "relevanceScore": round(relevance_score, 2),
                     "similarThought": similar_thoughts["documents"][0][i],
                     "thoughtNumber": metadata["tn"],
-                    "metadata": summary_metadata
+                    "keyThoughts": json.loads(summary_metadata.get("keyThoughts", "[]")) if summary_metadata else [],
                 })
     
     return context_results
@@ -514,6 +514,7 @@ async def chroma_sequential_thinking(
     branchId: Optional[str] = None,
     needsMoreThoughts: Optional[bool] = None,
     sessionSummary: Optional[str] = None,
+    keyThoughts: Optional[List[int]] = None,
     persist: bool = True
 ) -> Dict:
     """A detailed tool for dynamic and reflective problem-solving through thoughts.
@@ -522,7 +523,7 @@ async def chroma_sequential_thinking(
     Each thought can build on, question, or revise previous insights as understanding deepens.
     
     Args:
-        thought: DO NOT EXCEED 5000 BYTES. It is your current thinking step, which can include:
+        thought: Do not store code in the thought. It is your current thinking step, which can include:
             * Regular analytical steps
             * Revisions of previous thoughts
             * Questions about previous decisions
@@ -530,6 +531,7 @@ async def chroma_sequential_thinking(
             * Changes in approach
             * Hypothesis generation
             * Hypothesis verification
+        Do not make thoughts superfluous. Do not store code in the thought. 
         thoughtNumber: Current thought number
             * The current number in sequence (can go beyond initial total if needed)
         totalThoughts: Estimated total thoughts needed
@@ -549,6 +551,7 @@ async def chroma_sequential_thinking(
         needsMoreThoughts: If more thoughts are needed
             * If reaching end but realizing more thoughts needed
         sessionSummary: A summary of the current session. Provide when nextThoughtNeeded is false.
+        keyThoughts: A list of key thought numbers from the current session. Provide when nextThoughtNeeded is false.
         persist: Whether to persist thoughts in the Chroma database
         
         You should:
@@ -598,9 +601,11 @@ async def chroma_sequential_thinking(
         client = get_chroma_client()
         thoughts_collection, branches_collection, summary_collection = init_thinking_collections(client)
         
-        # Find similar sessions
-        similar_sessions = find_similar_sessions(thoughts_collection, summary_collection, thought)
-        
+        # Find similar sessions on first thought
+        if thoughtNumber == 1:
+            similar_sessions = find_similar_sessions(thoughts_collection, summary_collection, thought)
+        else:
+            similar_sessions = []
         processed_thought["context"] = similar_sessions
         
         # Store the thought
@@ -660,6 +665,7 @@ async def chroma_sequential_thinking(
                 "created_ts": current_time,
                 "updated_ts": current_time,
                 "version": 1,
+                "keyThoughts": json.dumps(keyThoughts) if keyThoughts else None,
             }
             
             if existing_summary:
