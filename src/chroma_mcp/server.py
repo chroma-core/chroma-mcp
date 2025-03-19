@@ -525,7 +525,7 @@ async def sequentialthinking(
     Each thought can build on, question, or revise previous insights as understanding deepens.
     
     Args:
-        thought: Keep this under 5000 bytes. It is your current thinking step, which can include:
+        thought: DO NOT EXCEED 5000 BYTES. It is your current thinking step, which can include:
             * Regular analytical steps
             * Revisions of previous thoughts
             * Questions about previous decisions
