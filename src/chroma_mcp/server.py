@@ -7,6 +7,7 @@ import argparse
 from chromadb.config import Settings
 import ssl
 import uuid
+import time
 
 
 # Initialize FastMCP server
@@ -392,106 +393,55 @@ async def chroma_get_documents(
         offset=offset
     )
     
-# Sequential Thinking Data Structure
-class SequentialThinking:
-    def __init__(self):
-        self.thought_history = []
-        self.branches = {}
-    
-    def validate_thought_data(self, input_data: Dict) -> Dict:
-        """Validate thought data structure."""
-        if not input_data.get("sessionId"):
-            raise ValueError("Invalid sessionId: must be provided")
-        if not input_data.get("thought") or not isinstance(input_data.get("thought"), str):
-            raise ValueError("Invalid thought: must be a string")
-        if not input_data.get("thoughtNumber") or not isinstance(input_data.get("thoughtNumber"), int):
+def validate_thought_data(input_data: Dict) -> Dict:
+    """Validate thought data structure."""
+    if not input_data.get("sessionId"):
+        raise ValueError("Invalid sessionId: must be provided")
+    if not input_data.get("thought") or not isinstance(input_data.get("thought"), str):
+        raise ValueError("Invalid thought: must be a string")
+    if not input_data.get("thoughtNumber") or not isinstance(input_data.get("thoughtNumber"), int):
             raise ValueError("Invalid thoughtNumber: must be a number")
-        if not input_data.get("totalThoughts") or not isinstance(input_data.get("totalThoughts"), int):
-            raise ValueError("Invalid totalThoughts: must be a number")
-        if not isinstance(input_data.get("nextThoughtNeeded"), bool):
-            raise ValueError("Invalid nextThoughtNeeded: must be a boolean")
+    if not input_data.get("totalThoughts") or not isinstance(input_data.get("totalThoughts"), int):
+        raise ValueError("Invalid totalThoughts: must be a number")
+    if not isinstance(input_data.get("nextThoughtNeeded"), bool):
+        raise ValueError("Invalid nextThoughtNeeded: must be a boolean")
         
+    return {
+        "sessionId": input_data.get("sessionId"),
+        "thought": input_data.get("thought"),
+        "thoughtNumber": input_data.get("thoughtNumber"),
+        "totalThoughts": input_data.get("totalThoughts"),
+        "nextThoughtNeeded": input_data.get("nextThoughtNeeded"),
+        "isRevision": input_data.get("isRevision"),
+        "revisesThought": input_data.get("revisesThought"),
+        "branchFromThought": input_data.get("branchFromThought"),
+        "branchId": input_data.get("branchId"),
+        "needsMoreThoughts": input_data.get("needsMoreThoughts"),
+    }
+    
+def process_thought(input_data: Dict) -> Dict:
+    """Process a new thought."""
+    try:
+        # Validate input data
+        validated_input = validate_thought_data(input_data)
+            
+        # Adjust total thoughts if needed
+        if validated_input["thoughtNumber"] > validated_input["totalThoughts"]:
+            validated_input["totalThoughts"] = validated_input["thoughtNumber"]
+            
+        # Return response
         return {
-            "sessionId": input_data.get("sessionId"),
-            "thought": input_data.get("thought"),
-            "thoughtNumber": input_data.get("thoughtNumber"),
-            "totalThoughts": input_data.get("totalThoughts"),
-            "nextThoughtNeeded": input_data.get("nextThoughtNeeded"),
-            "isRevision": input_data.get("isRevision"),
-            "revisesThought": input_data.get("revisesThought"),
-            "branchFromThought": input_data.get("branchFromThought"),
-            "branchId": input_data.get("branchId"),
-            "needsMoreThoughts": input_data.get("needsMoreThoughts"),
+            "sessionId": validated_input["sessionId"],
+            "thoughtNumber": validated_input["thoughtNumber"],
+            "totalThoughts": validated_input["totalThoughts"],
+            "nextThoughtNeeded": validated_input["nextThoughtNeeded"],
+            }
+            
+    except Exception as e:
+        return {
+            "error": str(e),
+            "status": "failed"
         }
-    
-    def format_thought(self, thought_data: Dict) -> str:
-        """Format thought for display."""
-        thought_number = thought_data.get("thoughtNumber")
-        total_thoughts = thought_data.get("totalThoughts")
-        thought = thought_data.get("thought")
-        is_revision = thought_data.get("isRevision")
-        revises_thought = thought_data.get("revisesThought")
-        branch_from_thought = thought_data.get("branchFromThought")
-        branch_id = thought_data.get("branchId")
-        
-        if is_revision:
-            prefix = 'Revision'
-            context = f" (revising thought {revises_thought})"
-        elif branch_from_thought:
-            prefix = 'Branch'
-            context = f" (from thought {branch_from_thought}, ID: {branch_id})"
-        else:
-            prefix = 'Thought'
-            context = ""
-            
-        header = f"{prefix} {thought_number}/{total_thoughts}{context}"
-        
-        return f"""
-Header: {header}
-Thought: {thought}
-"""
-    
-    def process_thought(self, input_data: Dict) -> Dict:
-        """Process a new thought."""
-        try:
-            # Validate input data
-            validated_input = self.validate_thought_data(input_data)
-            
-            # Adjust total thoughts if needed
-            if validated_input["thoughtNumber"] > validated_input["totalThoughts"]:
-                validated_input["totalThoughts"] = validated_input["thoughtNumber"]
-            
-            # Add to thought history
-            self.thought_history.append(validated_input)
-            
-            # Handle branching
-            if validated_input.get("branchFromThought") and validated_input.get("branchId"):
-                if validated_input["branchId"] not in self.branches:
-                    self.branches[validated_input["branchId"]] = []
-                self.branches[validated_input["branchId"]].append(validated_input)
-            
-            # Format for display (console output)
-            formatted_thought = self.format_thought(validated_input)
-            print(formatted_thought)  # For logging/debugging
-            
-            # Return response
-            return {
-                "sessionId": validated_input["sessionId"],
-                "thoughtNumber": validated_input["thoughtNumber"],
-                "totalThoughts": validated_input["totalThoughts"],
-                "nextThoughtNeeded": validated_input["nextThoughtNeeded"],
-                "branches": list(self.branches.keys()),
-                "thoughtHistoryLength": len(self.thought_history)
-            }
-            
-        except Exception as e:
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-# Create a singleton instance to manage state
-sequential_thinking = SequentialThinking()
 
 # Initialize persistence
 def init_thinking_collections(client):
@@ -501,9 +451,55 @@ def init_thinking_collections(client):
         name="sequential_thinking",
     ), client.get_or_create_collection(
         name="sequential_thinking_branches",
+    ), client.get_or_create_collection(
+        name="sequential_thinking_summary",
     )
     
-# Add these functions to your existing MCP server
+def find_similar_sessions(thoughts_collection, summary_collection, thought, similarity_threshold=0.75, max_results=3):
+    """Find similar sessions based on thought content."""
+    
+    # Query similar thoughts
+    similar_thoughts = thoughts_collection.query(
+        query_texts=[thought], 
+        n_results=max_results,
+        include=["metadatas", "documents", "distances"]
+    )
+    
+    context_results = []
+    
+    # Process results
+    for i in range(len(similar_thoughts["ids"][0])):
+        distance = similar_thoughts["distances"][0][i]
+        
+        # Only include results that meet threshold
+        if distance < similarity_threshold:
+            metadata = similar_thoughts["metadatas"][0][i]
+            session_id = metadata["sid"]
+            
+            # Get session summary
+            summary_results = summary_collection.get(
+                ids=[session_id],
+                include=["documents", "metadatas"]
+            )
+            
+            if summary_results["documents"]:
+                summary = summary_results["documents"][0]
+                summary_metadata = summary_results["metadatas"][0] if summary_results["metadatas"] else {}
+                
+                # Calculate relevance score (1.0 is exact match, 0.0 is completely dissimilar)
+                relevance_score = 1.0 - distance
+                
+                context_results.append({
+                    "sessionId": session_id,
+                    "summary": summary,
+                    "relevanceScore": round(relevance_score, 2),
+                    "similarThought": similar_thoughts["documents"][0][i],
+                    "thoughtNumber": metadata["tn"],
+                    "metadata": summary_metadata
+                })
+    
+    return context_results
+
 
 @mcp.tool()
 async def chroma_sequential_thinking(
@@ -517,6 +513,7 @@ async def chroma_sequential_thinking(
     branchFromThought: Optional[int] = None,
     branchId: Optional[str] = None,
     needsMoreThoughts: Optional[bool] = None,
+    sessionSummary: Optional[str] = None,
     persist: bool = True
 ) -> Dict:
     """A detailed tool for dynamic and reflective problem-solving through thoughts.
@@ -551,6 +548,7 @@ async def chroma_sequential_thinking(
             * Identifier for the current branch (if any)
         needsMoreThoughts: If more thoughts are needed
             * If reaching end but realizing more thoughts needed
+        sessionSummary: A summary of the current session. Provide when nextThoughtNeeded is false.
         persist: Whether to persist thoughts in the Chroma database
         
         You should:
@@ -569,6 +567,8 @@ async def chroma_sequential_thinking(
     Returns:
         Dictionary with thought metadata
     """
+    current_time = time.time()
+    
     # Generate session ID if not provided
     if not sessionId:
         sessionId = str(uuid.uuid4())[:8]
@@ -592,11 +592,16 @@ async def chroma_sequential_thinking(
     }
     
     # Process the thought
-    result = sequential_thinking.process_thought(input_data)
+    processed_thought = process_thought(input_data)
     
     if persist:
         client = get_chroma_client()
-        thoughts_collection, branches_collection = init_thinking_collections(client)
+        thoughts_collection, branches_collection, summary_collection = init_thinking_collections(client)
+        
+        # Find similar sessions
+        similar_sessions = find_similar_sessions(thoughts_collection, summary_collection, thought)
+        
+        processed_thought["context"] = similar_sessions
         
         # Store the thought
         thought_id = f"{sessionId}_{thoughtNumber}"
@@ -613,6 +618,7 @@ async def chroma_sequential_thinking(
             "bf": branchFromThought if branchFromThought else -1,
             "bid": branchId if branchId else "",
             "ntn": nextThoughtNeeded,
+            "ts": current_time,
         }
         
         # Store in Chroma
@@ -628,6 +634,7 @@ async def chroma_sequential_thinking(
                 "sid": sessionId,
                 "pt": branchFromThought,
                 "bid": branchId,
+                "ts": current_time,
             }
             
             branches_collection.add(
@@ -637,10 +644,46 @@ async def chroma_sequential_thinking(
             )
         
         # Add persistence info to result
-        result["persistedId"] = thought_id
+        processed_thought["persistedId"] = thought_id
+        
+        if sessionSummary:
+            existing_summary = None
+            try:
+                summary_result = summary_collection.get(ids=[sessionId], include=["documents", "metadatas"])
+                if summary_result["documents"]:
+                    existing_summary = summary_result["documents"][0]
+                    existing_metadata = summary_result["metadatas"][0]
+            except:
+                pass
+            summary_metadata = {
+                "sid": sessionId,
+                "created_ts": current_time,
+                "updated_ts": current_time,
+                "version": 1,
+            }
+            
+            if existing_summary:
+                summary_metadata["version"] = existing_metadata.get("version", 0) + 1
+                summary_metadata["created_ts"] = existing_metadata.get("created_ts", current_time)
+            
+                summary_collection.update(
+                    ids=[sessionId],
+                    documents=[sessionSummary],
+                    metadatas=[summary_metadata]
+                )
+            else:
+                summary_collection.add(
+                    documents=[sessionSummary],
+                    metadatas=[summary_metadata],
+                    ids=[sessionId]
+                )
+            processed_thought["summary"] = {
+                "content": sessionSummary,
+                "version": summary_metadata["version"],
+            }
     
     # Return processed result as JSON
-    return result
+    return processed_thought
 
 @mcp.tool()
 async def chroma_get_thought_history(
