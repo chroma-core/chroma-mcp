@@ -127,7 +127,7 @@ def get_chroma_client(args=None):
 ##### Collection Tools #####
 
 @mcp.tool()
-async def list_collections(
+async def chroma_list_collections(
     limit: Optional[int] = None,
     offset: Optional[int] = None
 ) -> List[str]:
@@ -145,7 +145,7 @@ async def list_collections(
 
 
 @mcp.tool()
-async def create_collection(
+async def chroma_create_collection(
     collection_name: str,
     hnsw_space: Optional[str] = None,
     hnsw_construction_ef: Optional[int] = None,
@@ -194,7 +194,7 @@ async def create_collection(
     return f"Successfully created collection {collection_name}{config_msg}"
 
 @mcp.tool()
-async def peek_collection(
+async def chroma_peek_collection(
     collection_name: str,
     limit: int = 5
 ) -> Dict:
@@ -210,7 +210,7 @@ async def peek_collection(
     return results
 
 @mcp.tool()
-async def get_collection_info(collection_name: str) -> Dict:
+async def chroma_get_collection_info(collection_name: str) -> Dict:
     """Get information about a Chroma collection.
     
     Args:
@@ -232,7 +232,7 @@ async def get_collection_info(collection_name: str) -> Dict:
     }
     
 @mcp.tool()
-async def get_collection_count(collection_name: str) -> int:
+async def chroma_get_collection_count(collection_name: str) -> int:
     """Get the number of documents in a Chroma collection.
     
     Args:
@@ -243,7 +243,7 @@ async def get_collection_count(collection_name: str) -> int:
     return collection.count()
 
 @mcp.tool()
-async def modify_collection(
+async def chroma_modify_collection(
     collection_name: str,
     new_name: Optional[str] = None,
     new_metadata: Optional[Dict] = None
@@ -273,7 +273,7 @@ async def modify_collection(
 
     
 @mcp.tool()
-async def delete_collection(collection_name: str) -> str:
+async def chroma_delete_collection(collection_name: str) -> str:
     """Delete a Chroma collection.
     
     Args:
@@ -285,7 +285,7 @@ async def delete_collection(collection_name: str) -> str:
 
 ##### Document Tools #####
 @mcp.tool()
-async def add_documents(
+async def chroma_add_documents(
     collection_name: str,
     documents: List[str],
     metadatas: Optional[List[Dict]] = None,
@@ -315,7 +315,7 @@ async def add_documents(
     return f"Successfully added {len(documents)} documents to collection {collection_name}"
 
 @mcp.tool()
-async def query_documents(
+async def chroma_query_documents(
     collection_name: str,
     query_texts: List[str],
     n_results: int = 5,
@@ -351,7 +351,7 @@ async def query_documents(
     )
 
 @mcp.tool()
-async def get_documents(
+async def chroma_get_documents(
     collection_name: str,
     ids: Optional[List[str]] = None,
     where: Optional[Dict] = None,
@@ -506,7 +506,7 @@ def init_thinking_collections(client):
 # Add these functions to your existing MCP server
 
 @mcp.tool()
-async def sequentialthinking(
+async def chroma_sequential_thinking(
     thought: str,
     thoughtNumber: int,
     totalThoughts: int,
@@ -643,7 +643,7 @@ async def sequentialthinking(
     return result
 
 @mcp.tool()
-async def get_thought_history(
+async def chroma_get_thought_history(
     sessionId: str,
 ) -> Dict:
     """Retrieve the thought history for a specific session.
@@ -682,7 +682,7 @@ async def get_thought_history(
     }
 
 @mcp.tool()
-async def get_thought_branches(sessionId: str) -> Dict:
+async def chroma_get_thought_branches(sessionId: str) -> Dict:
     """Get all branches for a specific thinking session.
     
     Args:
@@ -714,7 +714,7 @@ async def get_thought_branches(sessionId: str) -> Dict:
     }
 
 @mcp.tool()
-async def continue_thought_chain(
+async def chroma_continue_thought_chain(
     sessionId: str,
     branchId: Optional[str] = None
 ) -> Dict:
