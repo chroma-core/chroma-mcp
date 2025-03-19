@@ -207,7 +207,6 @@ dependencies = [
     { name = "chromadb" },
     { name = "mcp", extra = ["cli"] },
     { name = "python-dotenv" },
-    { name = "yachalk" },
 ]
 
 [package.metadata]
@@ -215,7 +214,6 @@ requires-dist = [
     { name = "chromadb", specifier = ">=0.6.3" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.2.1" },
     { name = "python-dotenv", specifier = ">=0.19.0" },
-    { name = "yachalk", specifier = ">=0.1.7" },
 ]
 
 [[package]]
@@ -1360,15 +1358,6 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "76.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fa/2b/287ade3a580869e6178cb37d045f54272b1f006f2c0ff6fad08db258d027/setuptools-76.1.0.tar.gz", hash = "sha256:4959b9ad482ada2ba2320c8f1a8d8481d4d8d668908a7a1b84d987375cd7f5bd", size = 1350273 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/fb/47dc84839f2743553075c80d08543b3d0f498f42329141b6717504abcdfd/setuptools-76.1.0-py3-none-any.whl", hash = "sha256:34750dcb17d046929f545dec9b8349fe42bf4ba13ddffee78428aec422dbfb73", size = 1236933 },
-]
-
-[[package]]
 name = "shellingham"
 version = "1.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1802,19 +1791,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/e1/0122853035b40b3f333bbb25f1939fc1045e21dd518f7f0922b60c156f7c/wrapt-1.17.2-cp313-cp313t-win32.whl", hash = "sha256:13e6afb7fe71fe7485a4550a8844cc9ffbe263c0f1a1eea569bc7091d4898555", size = 37986 },
     { url = "https://files.pythonhosted.org/packages/09/5e/1655cf481e079c1f22d0cabdd4e51733679932718dc23bf2db175f329b76/wrapt-1.17.2-cp313-cp313t-win_amd64.whl", hash = "sha256:eaf675418ed6b3b31c7a989fd007fa7c3be66ce14e5c3b27336383604c9da85c", size = 40750 },
     { url = "https://files.pythonhosted.org/packages/2d/82/f56956041adef78f849db6b289b282e72b55ab8045a75abad81898c28d19/wrapt-1.17.2-py3-none-any.whl", hash = "sha256:b18f2d1533a71f069c7f82d524a52599053d4c7166e9dd374ae2136b7f40f7c8", size = 23594 },
-]
-
-[[package]]
-name = "yachalk"
-version = "0.1.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "importlib-resources" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/df/039d7b2b02bf36187c4b1ec8871f12640763fce83eae150d0b435886d2ea/yachalk-0.1.7.tar.gz", hash = "sha256:4f2ac54adef924fda03756a94c8b4b780bf8aecf80bbd6afa80e9f74d6cecc5f", size = 17962 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/a0/523a7cad1fafaaa98bd5716c76eae545a58c6d53884c1be4a27e65c2b203/yachalk-0.1.7-py3-none-any.whl", hash = "sha256:1a97fd492dbbfef5bf347a3718d469b74285cb8e15a417bfb41b20eb103ba80f", size = 13851 },
 ]
 
 [[package]]
