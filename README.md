@@ -24,6 +24,8 @@
 
 # Chroma MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@chroma-core/chroma-mcp)](https://smithery.ai/server/@chroma-core/chroma-mcp)
+
 [The Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open protocol designed for effortless integration between LLM applications and external data sources or tools, offering a standardized framework to seamlessly provide LLMs with the context they require.
 
 This server provides data retrieval capabilities powered by Chroma, enabling AI models to create collections over generated data and user inputs, and retrieve that data using vector search, full text search, metadata filtering, and more.
@@ -163,4 +165,5 @@ export CHROMA_PORT="your-port"
 export CHROMA_CUSTOM_AUTH_CREDENTIALS="your-custom-auth-credentials"
 export CHROMA_SSL="true"
 ```
+
 
