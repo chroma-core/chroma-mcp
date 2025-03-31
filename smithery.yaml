@@ -4,9 +4,50 @@ startCommand:
   type: stdio
   configSchema:
     # JSON Schema defining the configuration options for the MCP.
-    {}
+    type: object
+    properties:
+      clientType:
+        type: string
+        enum:
+          - "http"
+          - "cloud"
+          - "persistent"
+          - "ephemeral"
+        default: "ephemeral"
+      dataDir:
+        type: string
+      host:
+        type: string
+      port:
+        type: number
+      customAuthCredentials:
+        type: string
+      tenant:
+        type: string
+      database:
+        type: string
+      apiKey:
+        type: string
+      ssl:
+        type: boolean
+        default: true
+        
+          
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
-    (config) => ({ command: 'chroma-mcp', args: [] })
+    (config) => ({ command: 'chroma-mcp', 
+    args: [],
+    env: {
+      CHROMA_CLIENT_TYPE: config.clientType,
+      CHROMA_DATA_DIR: config.dataDir,
+      CHROMA_HOST: config.host,
+      CHROMA_PORT: config.port,
+      CHROMA_CUSTOM_AUTH_CREDENTIALS: config.customAuthCredentials,
+      CHROMA_TENANT: config.tenant,
+      CHROMA_DATABASE: config.database,
+      CHROMA_API_KEY: config.apiKey,
+      CHROMA_SSL: config.ssl,
+    }
+    })
   exampleConfig: {}
