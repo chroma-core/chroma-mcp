@@ -53,16 +53,18 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 
 ### Supported Tools
 
-- `create_collection`
-- `peek_collection`
-- `list_collections`
-- `get_collection_info`
-- `get_collection_count`
-- `modify_collection`
-- `delete_collection`
-- `add_documents`
-- `query_documents`
-- `get_documents`
+- `chroma_list_collections` - List all collections with pagination support
+- `chroma_create_collection` - Create a new collection with optional HNSW configuration
+- `chroma_peek_collection` - View a sample of documents in a collection
+- `chroma_get_collection_info` - Get detailed information about a collection
+- `chroma_get_collection_count` - Get the number of documents in a collection
+- `chroma_modify_collection` - Update a collection's name or metadata
+- `chroma_delete_collection` - Delete a collection
+- `chroma_add_documents` - Add documents with optional metadata and custom IDs
+- `chroma_query_documents` - Query documents using semantic search with advanced filtering
+- `chroma_get_documents` - Retrieve documents by IDs or filters with pagination
+- `chroma_update_documents` - Update existing documents' content, metadata, or embeddings
+- `chroma_delete_documents` - Delete specific documents from a collection
 
 ## Usage with Claude Desktop
 
