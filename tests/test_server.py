@@ -411,3 +411,501 @@ async def test_update_documents_id_not_found():
     finally:
         # Clean up
         await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+# --- Tests for chroma_delete_documents ---
+
+@pytest.mark.asyncio
+async def test_delete_documents_success():
+    """Test successful document deletion."""
+    collection_name = "test_delete_collection_success"
+    doc_ids = ["doc1", "doc2"]
+    docs = ["Test doc 1", "Test doc 2"]
+    metadatas = [{"source": "test1"}, {"source": "test2"}]
+
+    try:
+        # 1. Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": docs,
+            "metadatas": metadatas,
+            "ids": doc_ids
+        })
+
+        # 2. Delete documents
+        delete_result = await mcp.call_tool("chroma_delete_documents", {
+            "collection_name": collection_name,
+            "ids": doc_ids
+        })
+        assert len(delete_result) == 1
+        assert "Successfully deleted" in delete_result[0].text
+
+        # 3. Verify documents are deleted
+        get_result_raw = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "ids": doc_ids,
+            "include": ["documents"]
+        })
+        assert len(get_result_raw) == 1
+        get_result = json.loads(get_result_raw[0].text)
+        assert isinstance(get_result, dict)
+        assert not get_result.get("documents")
+
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_delete_documents_invalid_args():
+    """Test delete documents with invalid arguments."""
+    collection_name = "test_delete_collection_invalid"
+
+    try:
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc"],
+            "ids": ["doc1"]
+        })
+
+        # Test with empty IDs list - Expect ToolError wrapping ValueError
+        with pytest.raises(ToolError, match="The 'ids' list cannot be empty."):
+            await mcp.call_tool("chroma_delete_documents", {
+                "collection_name": collection_name,
+                "ids": []
+            })
+
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_delete_documents_collection_not_found():
+    """Test deleting documents from a non-existent collection."""
+    # Expect ToolError wrapping the Exception from the function
+    with pytest.raises(ToolError, match="Failed to get collection"):
+        await mcp.call_tool("chroma_delete_documents", {
+            "collection_name": "non_existent_collection",
+            "ids": ["doc1"]
+        })
+
+@pytest.mark.asyncio
+async def test_delete_documents_id_not_found():
+    """Test deleting a document with an ID that does not exist. Expect no exception."""
+    collection_name = "test_delete_id_not_found"
+    try:
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc"],
+            "ids": ["existing_id"]
+        })
+
+        # Attempt to delete a non-existent ID - should not raise Exception
+        delete_result = await mcp.call_tool("chroma_delete_documents", {
+            "collection_name": collection_name,
+            "ids": ["non_existent_id"]
+        })
+        # Check the success message (even though the ID didn't exist)
+        assert len(delete_result) == 1
+        assert "Successfully deleted" in delete_result[0].text
+
+        # Verify that the existing document was not deleted
+        get_result_raw = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "ids": ["existing_id"],
+            "include": ["documents"]
+        })
+        assert len(get_result_raw) == 1
+        get_result = json.loads(get_result_raw[0].text)
+        assert isinstance(get_result, dict)
+        assert "documents" in get_result
+        assert isinstance(get_result["documents"], list)
+        assert get_result["documents"] == ["Test doc"]
+
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+# --- Tests for Collection Tools ---
+
+@pytest.mark.asyncio
+async def test_list_collections_success():
+    """Test successful collection listing."""
+    collection_name = "test_list_collections"
+    try:
+        # Create a test collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # List collections
+        result = await mcp.call_tool("chroma_list_collections", {"limit": None, "offset": None})
+        assert isinstance(result, list)
+        assert any(collection_name in item.text for item in result)
+        
+        # Test with limit
+        limited_result = await mcp.call_tool("chroma_list_collections", {"limit": 1, "offset": 0})
+        assert isinstance(limited_result, list)
+        assert len(limited_result) <= 1
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_create_collection_success():
+    """Test successful collection creation with various configurations."""
+    collection_name = "test_create_collection"
+    try:
+        # Test basic creation
+        result = await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        assert "Successfully created collection" in result[0].text
+        
+        # Test creation with HNSW configuration
+        hnsw_collection = "test_hnsw_collection"
+        hnsw_result = await mcp.call_tool("chroma_create_collection", {
+            "collection_name": hnsw_collection,
+            "hnsw_space": "cosine",
+            "hnsw_construction_ef": 100,
+            "hnsw_search_ef": 50,
+            "hnsw_M": 16
+        })
+        assert "Successfully created collection" in hnsw_result[0].text
+        assert "HNSW configuration" in hnsw_result[0].text
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": hnsw_collection})
+
+@pytest.mark.asyncio
+async def test_create_collection_duplicate():
+    """Test creating a collection with a name that already exists."""
+    collection_name = "test_duplicate_collection"
+    try:
+        # Create initial collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Attempt to create duplicate
+        with pytest.raises(ToolError, match="Failed to create collection"):
+            await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+            
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_peek_collection_success():
+    """Test successful collection peeking."""
+    collection_name = "test_peek_collection"
+    try:
+        # Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2", "Test doc 3"],
+            "ids": ["doc1", "doc2", "doc3"]
+        })
+        
+        # Test peek with default limit
+        result = await mcp.call_tool("chroma_peek_collection", {"collection_name": collection_name})
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert "documents" in result[0].text
+        assert "ids" in result[0].text
+        assert "metadatas" in result[0].text
+        
+        # Test peek with custom limit
+        limited_result = await mcp.call_tool("chroma_peek_collection", {
+            "collection_name": collection_name,
+            "limit": 2
+        })
+        assert len(limited_result) == 1
+        assert "documents" in limited_result[0].text
+        assert "ids" in limited_result[0].text
+        assert "metadatas" in limited_result[0].text
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_get_collection_info_success():
+    """Test successful collection info retrieval."""
+    collection_name = "test_collection_info"
+    try:
+        # Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2", "Test doc 3"],
+            "ids": ["doc1", "doc2", "doc3"]
+        })
+        
+        # Get collection info
+        result = await mcp.call_tool("chroma_get_collection_info", {"collection_name": collection_name})
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert collection_name in result[0].text
+        assert "count" in result[0].text
+        assert "sample_documents" in result[0].text
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_get_collection_count_success():
+    """Test successful collection count retrieval."""
+    collection_name = "test_collection_count"
+    try:
+        # Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2", "Test doc 3"],
+            "ids": ["doc1", "doc2", "doc3"]
+        })
+        
+        # Get collection count
+        result = await mcp.call_tool("chroma_get_collection_count", {"collection_name": collection_name})
+        assert isinstance(result, list)
+        assert len(result) == 1
+        count = int(result[0].text)
+        assert count == 3
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_modify_collection_success():
+    """Test successful collection modification."""
+    collection_name = "test_modify_collection"
+    new_name = "test_modified_collection"
+    try:
+        # Create initial collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Test modifying name
+        name_result = await mcp.call_tool("chroma_modify_collection", {
+            "collection_name": collection_name,
+            "new_name": new_name
+        })
+        assert "Successfully modified collection" in name_result[0].text
+        assert "updated name" in name_result[0].text
+        
+        # Test modifying metadata
+        metadata_result = await mcp.call_tool("chroma_modify_collection", {
+            "collection_name": new_name,
+            "new_metadata": {"test_key": "test_value"}
+        })
+        assert "Successfully modified collection" in metadata_result[0].text
+        assert "updated metadata" in metadata_result[0].text
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": new_name})
+
+@pytest.mark.asyncio
+async def test_delete_collection_success():
+    """Test successful collection deletion."""
+    collection_name = "test_delete_collection"
+    try:
+        # Create collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Delete collection
+        result = await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+        assert "Successfully deleted collection" in result[0].text
+        
+        # Verify collection is deleted
+        with pytest.raises(ToolError, match="Failed to get collection"):
+            await mcp.call_tool("chroma_get_collection_info", {"collection_name": collection_name})
+            
+    finally:
+        # Clean up in case deletion failed
+        try:
+            await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+        except:
+            pass
+
+# --- Tests for Document Tools ---
+
+@pytest.mark.asyncio
+async def test_add_documents_success():
+    """Test successful document addition."""
+    collection_name = "test_add_documents"
+    try:
+        # Create collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Test adding documents with metadata
+        result = await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2"],
+            "metadatas": [{"source": "test1"}, {"source": "test2"}],
+            "ids": ["doc1", "doc2"]
+        })
+        assert "Successfully added" in result[0].text
+        
+        # Verify documents were added
+        get_result = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "ids": ["doc1", "doc2"],
+            "include": ["documents", "metadatas"]
+        })
+        get_data = json.loads(get_result[0].text)
+        assert len(get_data["documents"]) == 2
+        assert len(get_data["metadatas"]) == 2
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_add_documents_invalid_args():
+    """Test adding documents with invalid arguments."""
+    collection_name = "test_add_documents_invalid"
+    try:
+        # Create collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Test with empty documents list
+        with pytest.raises(ToolError, match="The 'documents' list cannot be empty"):
+            await mcp.call_tool("chroma_add_documents", {
+                "collection_name": collection_name,
+                "documents": [],
+                "ids": ["doc1"]
+            })
+            
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_query_documents_success():
+    """Test successful document querying."""
+    collection_name = "test_query_documents"
+    try:
+        # Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2", "Test doc 3"],
+            "metadatas": [
+                {"source": "test1", "category": "A"},
+                {"source": "test2", "category": "B"},
+                {"source": "test3", "category": "A"}
+            ],
+            "ids": ["doc1", "doc2", "doc3"]
+        })
+        
+        # Test basic query
+        query_result = await mcp.call_tool("chroma_query_documents", {
+            "collection_name": collection_name,
+            "query_texts": ["Test doc 1"],  # Use exact match for more reliable results
+            "n_results": 2,
+            "include": ["documents", "metadatas", "distances"]
+        })
+        assert isinstance(query_result, list)
+        assert len(query_result) == 1
+        assert "documents" in query_result[0].text
+        assert "metadatas" in query_result[0].text
+        assert "distances" in query_result[0].text
+        
+        # Test query with metadata filter
+        filtered_result = await mcp.call_tool("chroma_query_documents", {
+            "collection_name": collection_name,
+            "query_texts": ["Test doc 1"],  # Use exact match for more reliable results
+            "n_results": 2,
+            "where": {"category": "A"},
+            "include": ["documents", "metadatas", "distances"]
+        })
+        assert isinstance(filtered_result, list)
+        assert len(filtered_result) == 1
+        assert "documents" in filtered_result[0].text
+        assert "metadatas" in filtered_result[0].text
+        assert "distances" in filtered_result[0].text
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_query_documents_invalid_args():
+    """Test querying documents with invalid arguments."""
+    collection_name = "test_query_documents_invalid"
+    try:
+        # Create collection
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        
+        # Test with empty query_texts
+        with pytest.raises(ToolError, match="The 'query_texts' list cannot be empty"):
+            await mcp.call_tool("chroma_query_documents", {
+                "collection_name": collection_name,
+                "query_texts": [],
+                "n_results": 5
+            })
+            
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_get_documents_success():
+    """Test successful document retrieval."""
+    collection_name = "test_get_documents"
+    try:
+        # Create collection and add documents
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2", "Test doc 3"],
+            "metadatas": [
+                {"source": "test1", "category": "A"},
+                {"source": "test2", "category": "B"},
+                {"source": "test3", "category": "A"}
+            ],
+            "ids": ["doc1", "doc2", "doc3"]
+        })
+        
+        # Test getting by IDs
+        id_result = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "ids": ["doc1", "doc2"],
+            "include": ["documents", "metadatas"]
+        })
+        id_data = json.loads(id_result[0].text)
+        assert len(id_data["documents"]) == 2
+        
+        # Test getting with metadata filter
+        filter_result = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "where": {"category": "A"},
+            "include": ["documents", "metadatas"]
+        })
+        filter_data = json.loads(filter_result[0].text)
+        assert len(filter_data["documents"]) == 2
+        
+        # Test getting with limit and offset
+        paginated_result = await mcp.call_tool("chroma_get_documents", {
+            "collection_name": collection_name,
+            "limit": 2,
+            "offset": 1,
+            "include": ["documents"]
+        })
+        paginated_data = json.loads(paginated_result[0].text)
+        assert len(paginated_data["documents"]) == 2
+        
+    finally:
+        # Clean up
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_get_documents_collection_not_found():
+    """Test getting documents from non-existent collection."""
+    with pytest.raises(ToolError, match="Failed to get documents from collection"):
+        await mcp.call_tool("chroma_get_documents", {
+            "collection_name": "non_existent_collection",
+            "ids": ["doc1"]
+        })
