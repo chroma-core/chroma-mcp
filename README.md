@@ -125,6 +125,8 @@ This will create a persistent client that will use the data directory specified.
 
 This will create a cloud client that automatically connects to api.trychroma.com using SSL.
 
+**Note:** Adding API keys in arguments is fine on local devices, but for safety, you can also specify a custom path for your environment configuration file using the `--dotenv-path` argument within the `args` list, for example: `"args": ["chroma-mcp", "--dotenv-path", "/custom/path/.env"]`.
+
 4. To connect to a [self-hosted Chroma instance on your own cloud provider](https://docs.trychroma.com/
 production/deployment), add the following to your `claude_desktop_config.json` file:
 
@@ -155,7 +157,7 @@ Find reference usages, such as shared knowledge bases & adding memory to context
 
 ### Using Environment Variables
 
-You can also use environment variables to configure the client:
+You can also use environment variables to configure the client. The server will automatically load variables from a `.env` file located at the path specified by `--dotenv-path` (defaults to `.chroma_env` in the working directory) or from system environment variables. Command-line arguments take precedence over environment variables.
 
 ```bash
 # Common variables
@@ -174,9 +176,12 @@ export CHROMA_HOST="your-host"
 export CHROMA_PORT="your-port"
 export CHROMA_CUSTOM_AUTH_CREDENTIALS="your-custom-auth-credentials"
 export CHROMA_SSL="true"
+
+# Optional: Specify path to .env file (defaults to .chroma_env)
+export CHROMA_DOTENV_PATH="/path/to/your/.env" 
 ```
 
 #### Embedding Function Environment Variables
 When using external embedding functions that access an API key, follow the naming convention
 `CHROMA_<>_API_KEY="<key>"`.
-So to set a Cohere API key, set the environment variable `CHROMA_COHERE_API_KEY=""` in the file matching the dotenv-path argument, or as a system environment variable.
+So to set a Cohere API key, set the environment variable `CHROMA_COHERE_API_KEY=""`. We recommend adding this to a .env file somewhere and using the `CHROMA_DOTENV_PATH` environment variable or `--dotenv-path` flag to set that location for safekeeping.
