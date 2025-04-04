@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypedDict
+from enum import Enum
 import chromadb
 from mcp.server.fastmcp import FastMCP
 import os
@@ -9,6 +10,21 @@ import ssl
 import uuid
 import time
 import json
+from typing_extensions import TypedDict
+
+
+from chromadb.api.collection_configuration import (
+    CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration
+    )
+from chromadb.api import EmbeddingFunction
+from chromadb.utils.embedding_functions import (
+    DefaultEmbeddingFunction,
+    CohereEmbeddingFunction,
+    OpenAIEmbeddingFunction,
+    JinaEmbeddingFunction,
+    VoyageAIEmbeddingFunction,
+    RoboflowEmbeddingFunction,
+)
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
@@ -49,7 +65,7 @@ def create_parser():
                        type=lambda x: x.lower() in ['true', 'yes', '1', 't', 'y'],
                        default=os.getenv('CHROMA_SSL', 'true').lower() in ['true', 'yes', '1', 't', 'y'])
     parser.add_argument('--dotenv-path', 
-                       help='Path to .chroma_env file', 
+                       help='Path to .env file', 
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
     return parser
 
@@ -64,7 +80,7 @@ def get_chroma_client(args=None):
         
         # Load environment variables from .env file if it exists
         load_dotenv(dotenv_path=args.dotenv_path)
-        
+        print(args.dotenv_path)
         if args.client_type == 'http':
             if not args.host:
                 raise ValueError("Host must be provided via --host flag or CHROMA_HOST environment variable when using HTTP client")
@@ -143,58 +159,87 @@ async def chroma_list_collections(
     """
     client = get_chroma_client()
     try:
-        return client.list_collections(limit=limit, offset=offset)
+        colls = client.list_collections(limit=limit, offset=offset)
+        # iterate over colls and output the names
+        return [coll.name for coll in colls]
+
     except Exception as e:
         raise Exception(f"Failed to list collections: {str(e)}") from e
 
-
+mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
+    "default": DefaultEmbeddingFunction,
+    "cohere": CohereEmbeddingFunction,
+    "openai": OpenAIEmbeddingFunction,
+    "jina": JinaEmbeddingFunction,
+    "voyageai": VoyageAIEmbeddingFunction,
+    "roboflow": RoboflowEmbeddingFunction,
+}
 @mcp.tool()
 async def chroma_create_collection(
     collection_name: str,
-    hnsw_space: Optional[str] = None,
-    hnsw_construction_ef: Optional[int] = None,
-    hnsw_search_ef: Optional[int] = None,
-    hnsw_M: Optional[int] = None,
-    hnsw_num_threads: Optional[int] = None,
-    hnsw_resize_factor: Optional[float] = None,
-    hnsw_batch_size: Optional[int] = None,
-    hnsw_sync_threshold: Optional[int] = None
+    embedding_function_name: Optional[str] = "default",
+    metadata: Optional[Dict] = None,
+    space: Optional[str] = None,
+    ef_construction: Optional[int] = None,
+    ef_search: Optional[int] = None,
+    max_neighbors: Optional[int] = None,
+    num_threads: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    sync_threshold: Optional[int] = None,
+    resize_factor: Optional[float] = None,
 ) -> str:
     """Create a new Chroma collection with configurable HNSW parameters.
     
     Args:
         collection_name: Name of the collection to create
-        hnsw_space: Distance function used in HNSW index. Options: 'l2', 'ip', 'cosine'
-        hnsw_construction_ef: Size of the dynamic candidate list for constructing the HNSW graph
-        hnsw_search_ef: Size of the dynamic candidate list for searching the HNSW graph
-        hnsw_M: Number of bi-directional links created for every new element
-        hnsw_num_threads: Number of threads to use during HNSW construction
-        hnsw_resize_factor: Factor to resize the index by when it's full
-        hnsw_batch_size: Number of elements to batch together during index construction
-        hnsw_sync_threshold: Number of elements to process before syncing index to disk
+        space: Distance function used in HNSW index. Options: 'l2', 'ip', 'cosine'
+        ef_construction: Size of the dynamic candidate list for constructing the HNSW graph
+        ef_search: Size of the dynamic candidate list for searching the HNSW graph
+        max_neighbors: Maximum number of neighbors to consider during HNSW graph construction
+        num_threads: Number of threads to use during HNSW construction
+        batch_size: Number of elements to batch together during index construction
+        sync_threshold: Number of elements to process before syncing index to disk
+        resize_factor: Factor to resize the index by when it's full
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
+        metadata: Optional metadata dict to add to the collection
     """
     client = get_chroma_client()
+        
     
-    # Build HNSW configuration directly in metadata, only including non-None values
-    metadata = {
-        k: v for k, v in {
-            "hnsw:space": hnsw_space,
-            "hnsw:construction_ef": hnsw_construction_ef,
-            "hnsw:M": hnsw_M,
-            "hnsw:search_ef": hnsw_search_ef,
-            "hnsw:num_threads": hnsw_num_threads,
-            "hnsw:resize_factor": hnsw_resize_factor,
-            "hnsw:batch_size": hnsw_batch_size,
-            "hnsw:sync_threshold": hnsw_sync_threshold
-        }.items() if v is not None
-    }
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
+    
+    hnsw_config = CreateHNSWConfiguration()
+    if space:
+        hnsw_config["space"] = space
+    if ef_construction:
+        hnsw_config["ef_construction"] = ef_construction
+    if ef_search:
+        hnsw_config["ef_search"] = ef_search
+    if max_neighbors:
+        hnsw_config["max_neighbors"] = max_neighbors
+    if num_threads:
+        hnsw_config["num_threads"] = num_threads
+    if batch_size:
+        hnsw_config["batch_size"] = batch_size
+    if sync_threshold:
+        hnsw_config["sync_threshold"] = sync_threshold
+    if resize_factor:
+        hnsw_config["resize_factor"] = resize_factor
+        
+        
+    
+    configuration=CreateCollectionConfiguration(
+        hnsw=hnsw_config,
+        embedding_function=embedding_function()
+    )
     
     try:
         client.create_collection(
             name=collection_name,
-            metadata=metadata if metadata else None
+            configuration=configuration,
+            metadata=metadata
         )
-        config_msg = f" with HNSW configuration: {metadata}" if metadata else ""
+        config_msg = f" with configuration: {configuration}"
         return f"Successfully created collection {collection_name}{config_msg}"
     except Exception as e:
         raise Exception(f"Failed to create collection '{collection_name}': {str(e)}") from e
@@ -261,7 +306,12 @@ async def chroma_get_collection_count(collection_name: str) -> int:
 async def chroma_modify_collection(
     collection_name: str,
     new_name: Optional[str] = None,
-    new_metadata: Optional[Dict] = None
+    new_metadata: Optional[Dict] = None,
+    ef_search: Optional[int] = None,
+    num_threads: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    sync_threshold: Optional[int] = None,
+    resize_factor: Optional[float] = None,
 ) -> str:
     """Modify a Chroma collection's name or metadata.
     
@@ -269,21 +319,37 @@ async def chroma_modify_collection(
         collection_name: Name of the collection to modify
         new_name: Optional new name for the collection
         new_metadata: Optional new metadata for the collection
+        ef_search: Size of the dynamic candidate list for searching the HNSW graph
+        num_threads: Number of threads to use during HNSW construction
+        batch_size: Number of elements to batch together during index construction
+        sync_threshold: Number of elements to process before syncing index to disk
+        resize_factor: Factor to resize the index by when it's full
     """
     client = get_chroma_client()
     try:
         collection = client.get_collection(collection_name)
         
-        if new_name:
-            collection.modify(name=new_name)
-        if new_metadata:
-            collection.modify(metadata=new_metadata)
+        hnsw_config = UpdateHNSWConfiguration()
+        if ef_search:
+            hnsw_config["ef_search"] = ef_search
+        if num_threads:
+            hnsw_config["num_threads"] = num_threads
+        if batch_size:
+            hnsw_config["batch_size"] = batch_size
+        if sync_threshold:
+            hnsw_config["sync_threshold"] = sync_threshold
+        if resize_factor:
+            hnsw_config["resize_factor"] = resize_factor
+        
+        collection.modify(name=new_name, hnsw=hnsw_config, metadata=new_metadata)
         
         modified_aspects = []
         if new_name:
             modified_aspects.append("name")
         if new_metadata:
             modified_aspects.append("metadata")
+        if ef_search or num_threads or batch_size or sync_threshold or resize_factor:
+            modified_aspects.append("hnsw")
         
         return f"Successfully modified collection {collection_name}: updated {' and '.join(modified_aspects)}"
     except Exception as e:
@@ -594,6 +660,12 @@ def main():
     """Entry point for the Chroma MCP server."""
     parser = create_parser()
     args = parser.parse_args()
+    
+    if args.dotenv_path:
+        load_dotenv(dotenv_path=args.dotenv_path)
+        # re-parse args to read the updated environment variables
+        parser = create_parser()
+        args = parser.parse_args()
     
     # Validate required arguments based on client type
     if args.client_type == 'http':

@@ -43,6 +43,7 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
   - List all collections with pagination support
   - Get collection information and statistics
   - Configure HNSW parameters for optimized vector search
+  - Select embedding functions when creating collections
 
 - **Document Operations**
   - Add documents with optional metadata and custom IDs
@@ -65,6 +66,13 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 - `chroma_get_documents` - Retrieve documents by IDs or filters with pagination
 - `chroma_update_documents` - Update existing documents' content, metadata, or embeddings
 - `chroma_delete_documents` - Delete specific documents from a collection
+
+### Embedding Functions
+Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, `jina`, `voyageai`, and `roboflow`.
+
+The embedding functions utilize Chroma's collection configuration, which persists the selected embedding function of a collection for retrieval. Once a collection is created using the collection configuration, on retrieval for future queries and inserts, the same embedding function will be used, without needing to specify the embedding function again. Embedding function persistance was added in v1.0.0 of Chroma, so if you created a collection using version <=0.6.3, this feature is not supported.
+
+When accessing embedding functions that utilize external APIs, please be sure to add the environment variable for the API key with the correct format, found in [Embedding Function Environment Variables](#embedding-function-environment-variables)
 
 ## Usage with Claude Desktop
 
@@ -168,4 +176,7 @@ export CHROMA_CUSTOM_AUTH_CREDENTIALS="your-custom-auth-credentials"
 export CHROMA_SSL="true"
 ```
 
-
+#### Embedding Function Environment Variables
+When using external embedding functions that access an API key, follow the naming convention
+`CHROMA_<>_API_KEY="<key>"`.
+So to set a Cohere API key, set the environment variable `CHROMA_COHERE_API_KEY=""` in the file matching the dotenv-path argument, or as a system environment variable.
