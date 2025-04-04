@@ -14,7 +14,7 @@ from typing_extensions import TypedDict
 
 
 from chromadb.api.collection_configuration import (
-    CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration
+    CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration, UpdateCollectionConfiguration
     )
 from chromadb.api import EmbeddingFunction
 from chromadb.utils.embedding_functions import (
@@ -341,7 +341,10 @@ async def chroma_modify_collection(
         if resize_factor:
             hnsw_config["resize_factor"] = resize_factor
         
-        collection.modify(name=new_name, hnsw=hnsw_config, metadata=new_metadata)
+        configuration = UpdateCollectionConfiguration(
+            hnsw=hnsw_config
+        )
+        collection.modify(name=new_name, configuration=configuration, metadata=new_metadata)
         
         modified_aspects = []
         if new_name:
