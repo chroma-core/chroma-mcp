@@ -559,23 +559,34 @@ async def test_create_collection_success():
         # Test basic creation
         result = await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
         assert "Successfully created collection" in result[0].text
-        
+
         # Test creation with HNSW configuration
         hnsw_collection = "test_hnsw_collection"
-        hnsw_result = await mcp.call_tool("chroma_create_collection", {
+        hnsw_params = {
             "collection_name": hnsw_collection,
-            "hnsw_space": "cosine",
-            "hnsw_construction_ef": 100,
-            "hnsw_search_ef": 50,
-            "hnsw_M": 16
-        })
+            "space": "cosine",
+            "ef_construction": 100,
+            "ef_search": 50,
+            "max_neighbors": 16 # Assuming M corresponds to max_neighbors
+        }
+        hnsw_result = await mcp.call_tool("chroma_create_collection", hnsw_params)
         assert "Successfully created collection" in hnsw_result[0].text
-        assert "HNSW configuration" in hnsw_result[0].text
-        
+        # Check if the specific config values are in the output string
+        assert "'space': 'cosine'" in hnsw_result[0].text
+        assert "'ef_construction': 100" in hnsw_result[0].text
+        assert "'ef_search': 50" in hnsw_result[0].text
+        assert "'max_neighbors': 16" in hnsw_result[0].text
+
     finally:
-        # Clean up
-        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
-        await mcp.call_tool("chroma_delete_collection", {"collection_name": hnsw_collection})
+        # Cleanup: delete the collections if they exist
+        try:
+            await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+        except Exception:
+            pass
+        try:
+            await mcp.call_tool("chroma_delete_collection", {"collection_name": hnsw_collection})
+        except Exception:
+            pass
 
 @pytest.mark.asyncio
 async def test_create_collection_duplicate():
