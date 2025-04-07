@@ -416,7 +416,7 @@ async def chroma_query_documents(
     n_results: int = 5,
     where: Optional[Dict] = None,
     where_document: Optional[Dict] = None,
-    include: Optional[List[str]] = None
+    include: List[str] = ["documents", "embeddings", "metadatas", "distances"]
 ) -> Dict:
     """Query documents from a Chroma collection with advanced filtering.
     
@@ -431,8 +431,7 @@ async def chroma_query_documents(
                - Logical AND: {"$and": [{"field1": {"$eq": "value1"}}, {"field2": {"$gt": 5}}]}
                - Logical OR: {"$or": [{"field1": {"$eq": "value1"}}, {"field1": {"$eq": "value2"}}]}
         where_document: Optional document content filters
-        include: Optional list of what to include in response. Can contain any of:
-                ["documents", "embeddings", "metadatas", "distances"]
+        include: List of what to include in response. By default, this will include documents, embeddings, metadatas, and distances.
     """
     if not query_texts:
         raise ValueError("The 'query_texts' list cannot be empty.")
@@ -456,7 +455,7 @@ async def chroma_get_documents(
     ids: Optional[List[str]] = None,
     where: Optional[Dict] = None,
     where_document: Optional[Dict] = None,
-    include: Optional[List[str]] = None,
+    include: List[str] = ["documents", "embeddings", "metadatas"],
     limit: Optional[int] = None,
     offset: Optional[int] = None
 ) -> Dict:
@@ -472,8 +471,7 @@ async def chroma_get_documents(
                - Logical AND: {"$and": [{"field1": {"$eq": "value1"}}, {"field2": {"$gt": 5}}]}
                - Logical OR: {"$or": [{"field1": {"$eq": "value1"}}, {"field1": {"$eq": "value2"}}]}
         where_document: Optional document content filters
-        include: Optional list of what to include in response. Can contain any of:
-                ["documents", "embeddings", "metadatas"]
+        include: List of what to include in response. By default, this will include documents, embeddings, and metadatas.
         limit: Optional maximum number of documents to return
         offset: Optional number of documents to skip before returning results
     
