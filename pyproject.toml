@@ -1,6 +1,6 @@
 [project]
 name = "chroma-mcp"
-version = "0.2.1"
+version = "0.2.2"
 description = "Chroma MCP Server - Vector Database Integration for LLM Applications"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "chromadb>=1.0.0",
+    "chromadb>=1.0.3",
     "cohere>=5.14.2",
     "httpx>=0.28.1",
     "mcp[cli]>=1.2.1",

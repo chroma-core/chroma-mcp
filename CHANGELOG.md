@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] - 2025-04-03
+## [0.2.2] - 04/08/2025
+
+### Changed
+
+- Update chromadb to v1.0.3
+- Fix include on query and get to match chromadb Python client
+
+
+## [0.2.1] - 04/03/2025
 
 ### Added
 
@@ -15,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded to v1.0.0 of Chroma
 - Fix dotenv path support during argparse
 
-## [0.2.0] - 2025-04-02
+## [0.2.0] - 04/02/2025
 
 ### Added
 - New `delete_document` tool for removing documents from collections
@@ -32,12 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Enhanced SSL handling and security configurations
 
-## [0.1.11] - 2025-02-21
+## [0.1.11] - 02/21/2025
 
 ### Changed
 - Version bump
 
-## [0.1.10] - 2024-02-21
+## [0.1.10] - 02/21/2024
 
 ### Added
 - Initial release
