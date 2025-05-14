@@ -607,6 +607,50 @@ async def chroma_delete_documents(
             f"Failed to delete documents from collection '{collection_name}': {str(e)}"
         ) from e
 
+@mcp.tool()
+async def chroma_import_documents(
+    collection_name: str,
+    file_paths: List[str]
+) -> str:
+    """Import documents from a list of file paths into a Chroma collection.
+    Each document will use the file path as its ID and will be tagged with its file name in the metadata.
+    
+    Args:
+        collection_name: Name of the collection to import documents into
+        file_paths: List of file paths to import
+    Returns:
+        A summary string of the import operation
+    """
+    if not file_paths:
+        raise ValueError("The 'file_paths' list cannot be empty.")
+
+    documents = []
+    metadatas = []
+    ids = []
+    failed_files = []
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            documents.append(content)
+            ids.append(file_path)
+            metadatas.append({"file_name": os.path.basename(file_path)})
+        except Exception as e:
+            failed_files.append({"file_path": file_path, "error": str(e)})
+
+    if not documents:
+        raise Exception(f"No documents could be read from the provided file paths. Errors: {failed_files}")
+
+    # Use the existing chroma_add_documents logic
+    try:
+        result = await chroma_add_documents(collection_name, documents, metadatas, ids)
+        summary = f"Imported {len(documents)} documents into collection '{collection_name}'. IDs: {ids}."
+        if failed_files:
+            summary += f" Failed to import {len(failed_files)} files: {failed_files}"
+        return summary
+    except Exception as e:
+        raise Exception(f"Failed to import documents: {str(e)}") from e
+
 def validate_thought_data(input_data: Dict) -> Dict:
     """Validate thought data structure."""
     if not input_data.get("sessionId"):
