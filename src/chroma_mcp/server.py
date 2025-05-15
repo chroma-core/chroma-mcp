@@ -155,12 +155,15 @@ async def chroma_list_collections(
         offset: Optional number of collections to skip before returning results
     
     Returns:
-        List of collection names
+        List of collection names or ["__NO_COLLECTIONS_FOUND__"] if database is empty
     """
     client = get_chroma_client()
     try:
         colls = client.list_collections(limit=limit, offset=offset)
-        # iterate over colls and output the names
+        # Safe handling: If colls is None or empty, return a special marker
+        if not colls:
+            return ["__NO_COLLECTIONS_FOUND__"]
+        # Otherwise iterate to get collection names
         return [coll.name for coll in colls]
 
     except Exception as e:
