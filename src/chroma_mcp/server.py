@@ -377,35 +377,62 @@ async def chroma_delete_collection(collection_name: str) -> str:
 async def chroma_add_documents(
     collection_name: str,
     documents: List[str],
-    metadatas: Optional[List[Dict]] = None,
-    ids: Optional[List[str]] = None
+    ids: List[str],
+    metadatas: List[Dict]
 ) -> str:
     """Add documents to a Chroma collection.
     
     Args:
         collection_name: Name of the collection to add documents to
         documents: List of text documents to add
+        ids: List of IDs for the documents (required)
         metadatas: Optional list of metadata dictionaries for each document
-        ids: Optional list of IDs for the documents
     """
     if not documents:
         raise ValueError("The 'documents' list cannot be empty.")
+    
+    if not ids:
+        raise ValueError("The 'ids' list is required and cannot be empty.")
+    
+    # 检查ids列表中是否有空字符串
+    if any(not id.strip() for id in ids):
+        raise ValueError("IDs cannot be empty strings.")
+    
+    if len(ids) != len(documents):
+        raise ValueError(f"Number of ids ({len(ids)}) must match number of documents ({len(documents)}).")
 
     client = get_chroma_client()
     try:
         collection = client.get_or_create_collection(collection_name)
         
-        # Generate sequential IDs if none provided
-        if ids is None:
-            ids = [str(i) for i in range(len(documents))]
+        # 检查是否有重复的ID
+        existing_ids = collection.get(include=[])["ids"]
+        duplicate_ids = [id for id in ids if id in existing_ids]
         
-        collection.add(
+        if duplicate_ids:
+            raise ValueError(
+                f"The following IDs already exist in collection '{collection_name}': {duplicate_ids}. "
+                f"Use 'chroma_update_documents' to update existing documents."
+            )
+        
+        result = collection.add(
             documents=documents,
             metadatas=metadatas,
             ids=ids
         )
         
-        return f"Successfully added {len(documents)} documents to collection {collection_name}"
+        # 判断返回值
+        if result and isinstance(result, dict):
+            # 如果返回值是字典，可能包含成功信息
+            if 'success' in result and not result['success']:
+                raise Exception(f"Failed to add documents: {result.get('error', 'Unknown error')}")
+            
+            # 如果返回值包含实际添加的数量
+            if 'count' in result:
+                return f"Successfully added {result['count']} documents to collection {collection_name}"
+        
+        # 默认返回
+        return f"Successfully added {len(documents)} documents to collection {collection_name}, result is {result}"
     except Exception as e:
         raise Exception(f"Failed to add documents to collection '{collection_name}': {str(e)}") from e
 
