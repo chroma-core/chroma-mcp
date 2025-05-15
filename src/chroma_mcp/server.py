@@ -397,7 +397,7 @@ async def chroma_add_documents(
     if not ids:
         raise ValueError("The 'ids' list is required and cannot be empty.")
     
-    # 检查ids列表中是否有空字符串
+    # Check if there are empty strings in the ids list
     if any(not id.strip() for id in ids):
         raise ValueError("IDs cannot be empty strings.")
     
@@ -408,7 +408,7 @@ async def chroma_add_documents(
     try:
         collection = client.get_or_create_collection(collection_name)
         
-        # 检查是否有重复的ID
+        # Check for duplicate IDs
         existing_ids = collection.get(include=[])["ids"]
         duplicate_ids = [id for id in ids if id in existing_ids]
         
@@ -424,17 +424,17 @@ async def chroma_add_documents(
             ids=ids
         )
         
-        # 判断返回值
+        # Check the return value
         if result and isinstance(result, dict):
-            # 如果返回值是字典，可能包含成功信息
+            # If the return value is a dictionary, it may contain success information
             if 'success' in result and not result['success']:
                 raise Exception(f"Failed to add documents: {result.get('error', 'Unknown error')}")
             
-            # 如果返回值包含实际添加的数量
+            # If the return value contains the actual number added
             if 'count' in result:
                 return f"Successfully added {result['count']} documents to collection {collection_name}"
         
-        # 默认返回
+        # Default return
         return f"Successfully added {len(documents)} documents to collection {collection_name}, result is {result}"
     except Exception as e:
         raise Exception(f"Failed to add documents to collection '{collection_name}': {str(e)}") from e
