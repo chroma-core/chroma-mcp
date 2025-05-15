@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, TypedDict
 from enum import Enum
 import chromadb
 from mcp.server.fastmcp import FastMCP
@@ -145,8 +145,8 @@ def get_chroma_client(args=None):
 
 @mcp.tool()
 async def chroma_list_collections(
-    limit: Optional[int] = None,
-    offset: Optional[int] = None
+    limit: int = None,
+    offset: int = None
 ) -> List[str]:
     """List all collection names in the Chroma database with pagination support.
     
@@ -177,16 +177,16 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
 @mcp.tool()
 async def chroma_create_collection(
     collection_name: str,
-    embedding_function_name: Optional[str] = "default",
-    metadata: Optional[Dict] = None,
-    space: Optional[str] = None,
-    ef_construction: Optional[int] = None,
-    ef_search: Optional[int] = None,
-    max_neighbors: Optional[int] = None,
-    num_threads: Optional[int] = None,
-    batch_size: Optional[int] = None,
-    sync_threshold: Optional[int] = None,
-    resize_factor: Optional[float] = None,
+    embedding_function_name: str = "default",
+    metadata: Dict = None,
+    space: str = None,
+    ef_construction: int = None,
+    ef_search: int = None,
+    max_neighbors: int = None,
+    num_threads: int = None,
+    batch_size: int = None,
+    sync_threshold: int = None,
+    resize_factor: float = None,
 ) -> str:
     """Create a new Chroma collection with configurable HNSW parameters.
     
@@ -305,13 +305,13 @@ async def chroma_get_collection_count(collection_name: str) -> int:
 @mcp.tool()
 async def chroma_modify_collection(
     collection_name: str,
-    new_name: Optional[str] = None,
-    new_metadata: Optional[Dict] = None,
-    ef_search: Optional[int] = None,
-    num_threads: Optional[int] = None,
-    batch_size: Optional[int] = None,
-    sync_threshold: Optional[int] = None,
-    resize_factor: Optional[float] = None,
+    new_name: str = None,
+    new_metadata: Dict = None,
+    ef_search: int = None,
+    num_threads: int = None,
+    batch_size: int = None,
+    sync_threshold: int = None,
+    resize_factor: float = None,
 ) -> str:
     """Modify a Chroma collection's name or metadata.
     
@@ -378,7 +378,7 @@ async def chroma_add_documents(
     collection_name: str,
     documents: List[str],
     ids: List[str],
-    metadatas: List[Dict]
+    metadatas: List[Dict] = None
 ) -> str:
     """Add documents to a Chroma collection.
     
@@ -441,8 +441,8 @@ async def chroma_query_documents(
     collection_name: str,
     query_texts: List[str],
     n_results: int = 5,
-    where: Optional[Dict] = None,
-    where_document: Optional[Dict] = None,
+    where: Dict = None,
+    where_document: Dict = None,
     include: List[str] = ["documents", "metadatas", "distances"]
 ) -> Dict:
     """Query documents from a Chroma collection with advanced filtering.
@@ -479,12 +479,12 @@ async def chroma_query_documents(
 @mcp.tool()
 async def chroma_get_documents(
     collection_name: str,
-    ids: Optional[List[str]] = None,
-    where: Optional[Dict] = None,
-    where_document: Optional[Dict] = None,
+    ids: List[str] = None,
+    where: Dict = None,
+    where_document: Dict = None,
     include: List[str] = ["documents", "metadatas"],
-    limit: Optional[int] = None,
-    offset: Optional[int] = None
+    limit: int = None,
+    offset: int = None
 ) -> Dict:
     """Get documents from a Chroma collection with optional filtering.
     
@@ -523,9 +523,9 @@ async def chroma_get_documents(
 async def chroma_update_documents(
     collection_name: str,
     ids: List[str],
-    embeddings: Optional[List[List[float]]] = None,
-    metadatas: Optional[List[Dict]] = None,
-    documents: Optional[List[str]] = None
+    embeddings: List[List[float]] = None,
+    metadatas: List[Dict] = None,
+    documents: List[str] = None
 ) -> str:
     """Update documents in a Chroma collection.
 
