@@ -571,7 +571,7 @@ async def test_create_collection_success():
         }
         hnsw_result = await mcp.call_tool("chroma_create_collection", hnsw_params)
         assert "Successfully created collection" in hnsw_result[0].text
-        # 不再检查具体参数，只检查创建成功
+        # Only check for successful creation, not the specific parameters
 
     finally:
         # Cleanup: delete the collections if they exist
