@@ -36,7 +36,7 @@ def test_get_chroma_client_ephemeral():
 @pytest.mark.asyncio
 async def test_list_collections():
     # Test list_collections tool
-    result = await mcp.call_tool("chroma_list_collections", {"limit": None, "offset": None})
+    result = await mcp.call_tool("chroma_list_collections", {"limit": 50, "offset": 0})
     assert isinstance(result, list)
 
 @pytest.mark.asyncio
@@ -538,7 +538,7 @@ async def test_list_collections_success():
         await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
         
         # List collections
-        result = await mcp.call_tool("chroma_list_collections", {"limit": None, "offset": None})
+        result = await mcp.call_tool("chroma_list_collections", {"limit": 50, "offset": 0})
         assert isinstance(result, list)
         assert any(collection_name in item.text for item in result)
         
