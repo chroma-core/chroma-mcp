@@ -1,0 +1,40 @@
+services:
+  # Chroma Vector Database
+  chroma:
+    image: chromadb/chroma
+    container_name: chroma
+    restart: always
+    volumes:
+      - ${HOME}/chromadb_data:/chroma/chroma
+    ports:
+      - "8100:8000"
+    environment:
+      - ALLOW_RESET=true
+    networks:
+      - chroma-net
+
+  # Chroma MCP Server
+  chroma-mcp:
+    build:
+      context: .claude/mcp-servers/simple-rag/chroma-mcp
+      dockerfile: Dockerfile.new
+    container_name: chroma-mcp
+    restart: always
+    depends_on:
+      - chroma
+    ports:
+      - "8080:8080"
+    environment:
+      - CHROMA_CLIENT_TYPE=http
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_SSL=false
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8080
+      - MCP_TRANSPORT=http
+    networks:
+      - chroma-net
+
+networks:
+  chroma-net:
+    driver: bridge

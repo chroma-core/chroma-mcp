@@ -52,6 +52,12 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
   - Retrieve documents by IDs or filters
   - Full text search capabilities
 
+- **Docker Support**
+  - Ready-to-use Docker container for Chroma MCP
+  - Docker Compose setup for Chroma and MCP Server
+  - Configurable via environment variables
+  - See the [Docker directory](docker/) for details
+
 ### Supported Tools
 
 - `chroma_list_collections` - List all collections with pagination support
