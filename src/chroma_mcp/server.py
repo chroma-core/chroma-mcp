@@ -10,13 +10,12 @@ import ssl
 import uuid
 import time
 import json
-from typing_extensions import TypedDict
-
+from typing import TypedDict
 
 from chromadb.api.collection_configuration import (
     CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration, UpdateCollectionConfiguration
     )
-from chromadb.api import EmbeddingFunction
+from chromadb.api.types import EmbeddingFunction
 from chromadb.utils.embedding_functions import (
     DefaultEmbeddingFunction,
     CohereEmbeddingFunction,
@@ -25,6 +24,8 @@ from chromadb.utils.embedding_functions import (
     VoyageAIEmbeddingFunction,
     RoboflowEmbeddingFunction,
 )
+
+from chroma_mcp.embedding.local_huggingface import HuggingFaceLocalEmbeddingFunction
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
@@ -173,6 +174,7 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
     "jina": JinaEmbeddingFunction,
     "voyageai": VoyageAIEmbeddingFunction,
     "roboflow": RoboflowEmbeddingFunction,
+    "local_huggingface": HuggingFaceLocalEmbeddingFunction,  # Placeholder for local HuggingFace embedding function
 }
 @mcp.tool()
 async def chroma_create_collection(
@@ -247,39 +249,41 @@ async def chroma_create_collection(
 @mcp.tool()
 async def chroma_peek_collection(
     collection_name: str,
-    limit: int = 5
+    limit: int = 5,
+    embedding_function_name: Optional[str] = "default"
 ) -> Dict:
     """Peek at documents in a Chroma collection.
     
     Args:
         collection_name: Name of the collection to peek into
         limit: Number of documents to peek at
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         results = collection.peek(limit=limit)
         return results
     except Exception as e:
         raise Exception(f"Failed to peek collection '{collection_name}': {str(e)}") from e
 
 @mcp.tool()
-async def chroma_get_collection_info(collection_name: str) -> Dict:
+async def chroma_get_collection_info(collection_name: str, embedding_function_name: Optional[str] = "default") -> Dict:
     """Get information about a Chroma collection.
     
     Args:
         collection_name: Name of the collection to get info about
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
-        
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         # Get collection count
         count = collection.count()
-        
         # Peek at a few documents
         peek_results = collection.peek(limit=3)
-        
         return {
             "name": collection_name,
             "count": count,
@@ -289,15 +293,17 @@ async def chroma_get_collection_info(collection_name: str) -> Dict:
         raise Exception(f"Failed to get collection info for '{collection_name}': {str(e)}") from e
     
 @mcp.tool()
-async def chroma_get_collection_count(collection_name: str) -> int:
+async def chroma_get_collection_count(collection_name: str, embedding_function_name: Optional[str] = "default") -> int:
     """Get the number of documents in a Chroma collection.
     
     Args:
         collection_name: Name of the collection to count
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         return collection.count()
     except Exception as e:
         raise Exception(f"Failed to get collection count for '{collection_name}': {str(e)}") from e
@@ -312,6 +318,7 @@ async def chroma_modify_collection(
     batch_size: Optional[int] = None,
     sync_threshold: Optional[int] = None,
     resize_factor: Optional[float] = None,
+    embedding_function_name: Optional[str] = "default"
 ) -> str:
     """Modify a Chroma collection's name or metadata.
     
@@ -324,11 +331,12 @@ async def chroma_modify_collection(
         batch_size: Number of elements to batch together during index construction
         sync_threshold: Number of elements to process before syncing index to disk
         resize_factor: Factor to resize the index by when it's full
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
-        
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         hnsw_config = UpdateHNSWConfiguration()
         if ef_search:
             hnsw_config["ef_search"] = ef_search
@@ -340,12 +348,10 @@ async def chroma_modify_collection(
             hnsw_config["sync_threshold"] = sync_threshold
         if resize_factor:
             hnsw_config["resize_factor"] = resize_factor
-        
         configuration = UpdateCollectionConfiguration(
             hnsw=hnsw_config
         )
         collection.modify(name=new_name, configuration=configuration, metadata=new_metadata)
-        
         modified_aspects = []
         if new_name:
             modified_aspects.append("name")
@@ -353,20 +359,23 @@ async def chroma_modify_collection(
             modified_aspects.append("metadata")
         if ef_search or num_threads or batch_size or sync_threshold or resize_factor:
             modified_aspects.append("hnsw")
-        
         return f"Successfully modified collection {collection_name}: updated {' and '.join(modified_aspects)}"
     except Exception as e:
         raise Exception(f"Failed to modify collection '{collection_name}': {str(e)}") from e
 
 @mcp.tool()
-async def chroma_delete_collection(collection_name: str) -> str:
+async def chroma_delete_collection(collection_name: str, embedding_function_name: Optional[str] = "default") -> str:
     """Delete a Chroma collection.
     
     Args:
         collection_name: Name of the collection to delete
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
+        # get_collection to ensure embedding_function is used (even if not strictly needed for delete)
+        client.get_collection(collection_name, embedding_function=embedding_function())
         client.delete_collection(collection_name)
         return f"Successfully deleted collection {collection_name}"
     except Exception as e:
@@ -378,7 +387,8 @@ async def chroma_add_documents(
     collection_name: str,
     documents: List[str],
     metadatas: Optional[List[Dict]] = None,
-    ids: Optional[List[str]] = None
+    ids: Optional[List[str]] = None,
+    embedding_function_name: Optional[str] = "default"
 ) -> str:
     """Add documents to a Chroma collection.
     
@@ -387,24 +397,22 @@ async def chroma_add_documents(
         documents: List of text documents to add
         metadatas: Optional list of metadata dictionaries for each document
         ids: Optional list of IDs for the documents
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     if not documents:
         raise ValueError("The 'documents' list cannot be empty.")
-
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_or_create_collection(collection_name)
-        
+        collection = client.get_or_create_collection(collection_name, embedding_function=embedding_function())
         # Generate sequential IDs if none provided
         if ids is None:
             ids = [str(i) for i in range(len(documents))]
-        
         collection.add(
             documents=documents,
             metadatas=metadatas,
             ids=ids
         )
-        
         return f"Successfully added {len(documents)} documents to collection {collection_name}"
     except Exception as e:
         raise Exception(f"Failed to add documents to collection '{collection_name}': {str(e)}") from e
@@ -416,7 +424,8 @@ async def chroma_query_documents(
     n_results: int = 5,
     where: Optional[Dict] = None,
     where_document: Optional[Dict] = None,
-    include: List[str] = ["documents", "metadatas", "distances"]
+    include: List[str] = ["documents", "metadatas", "distances"],
+    embedding_function_name: Optional[str] = "default"
 ) -> Dict:
     """Query documents from a Chroma collection with advanced filtering.
     
@@ -432,13 +441,14 @@ async def chroma_query_documents(
                - Logical OR: {"$or": [{"field1": {"$eq": "value1"}}, {"field1": {"$eq": "value2"}}]}
         where_document: Optional document content filters
         include: List of what to include in response. By default, this will include documents, metadatas, and distances.
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     """
     if not query_texts:
         raise ValueError("The 'query_texts' list cannot be empty.")
-
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         return collection.query(
             query_texts=query_texts,
             n_results=n_results,
@@ -457,7 +467,8 @@ async def chroma_get_documents(
     where_document: Optional[Dict] = None,
     include: List[str] = ["documents", "metadatas"],
     limit: Optional[int] = None,
-    offset: Optional[int] = None
+    offset: Optional[int] = None,
+    embedding_function_name: Optional[str] = "default"
 ) -> Dict:
     """Get documents from a Chroma collection with optional filtering.
     
@@ -474,13 +485,14 @@ async def chroma_get_documents(
         include: List of what to include in response. By default, this will include documents, and metadatas.
         limit: Optional maximum number of documents to return
         offset: Optional number of documents to skip before returning results
-    
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     Returns:
         Dictionary containing the matching documents, their IDs, and requested includes
     """
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
         return collection.get(
             ids=ids,
             where=where,
@@ -498,7 +510,8 @@ async def chroma_update_documents(
     ids: List[str],
     embeddings: Optional[List[List[float]]] = None,
     metadatas: Optional[List[Dict]] = None,
-    documents: Optional[List[str]] = None
+    documents: Optional[List[str]] = None,
+    embedding_function_name: Optional[str] = "default"
 ) -> str:
     """Update documents in a Chroma collection.
 
@@ -511,7 +524,7 @@ async def chroma_update_documents(
                    Must match length of ids if provided.
         documents: Optional list of new text documents.
                    Must match length of ids if provided.
-
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     Returns:
         A confirmation message indicating the number of documents updated.
 
@@ -523,13 +536,11 @@ async def chroma_update_documents(
     """
     if not ids:
         raise ValueError("The 'ids' list cannot be empty.")
-
     if embeddings is None and metadatas is None and documents is None:
         raise ValueError(
             "At least one of 'embeddings', 'metadatas', or 'documents' "
             "must be provided for update."
         )
-
     # Ensure provided lists match the length of ids if they are not None
     if embeddings is not None and len(embeddings) != len(ids):
         raise ValueError("Length of 'embeddings' list must match length of 'ids' list.")
@@ -537,16 +548,14 @@ async def chroma_update_documents(
         raise ValueError("Length of 'metadatas' list must match length of 'ids' list.")
     if documents is not None and len(documents) != len(ids):
         raise ValueError("Length of 'documents' list must match length of 'ids' list.")
-
-
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
     except Exception as e:
         raise Exception(
             f"Failed to get collection '{collection_name}': {str(e)}"
         ) from e
-
     # Prepare arguments for update, excluding None values at the top level
     update_args = {
         "ids": ids,
@@ -555,7 +564,6 @@ async def chroma_update_documents(
         "documents": documents,
     }
     kwargs = {k: v for k, v in update_args.items() if v is not None}
-
     try:
         collection.update(**kwargs)
         return (
@@ -570,14 +578,15 @@ async def chroma_update_documents(
 @mcp.tool()
 async def chroma_delete_documents(
     collection_name: str,
-    ids: List[str]
+    ids: List[str],
+    embedding_function_name: Optional[str] = "default"
 ) -> str:
     """Delete documents from a Chroma collection.
 
     Args:
         collection_name: Name of the collection to delete documents from
         ids: List of document IDs to delete
-
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
     Returns:
         A confirmation message indicating the number of documents deleted.
 
@@ -587,15 +596,14 @@ async def chroma_delete_documents(
     """
     if not ids:
         raise ValueError("The 'ids' list cannot be empty.")
-
     client = get_chroma_client()
+    embedding_function = mcp_known_embedding_functions[embedding_function_name]
     try:
-        collection = client.get_collection(collection_name)
+        collection = client.get_collection(collection_name, embedding_function=embedding_function())
     except Exception as e:
         raise Exception(
             f"Failed to get collection '{collection_name}': {str(e)}"
         ) from e
-
     try:
         collection.delete(ids=ids)
         return (

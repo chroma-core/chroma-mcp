@@ -179,6 +179,9 @@ export CHROMA_SSL="true"
 
 # Optional: Specify path to .env file (defaults to .chroma_env)
 export CHROMA_DOTENV_PATH="/path/to/your/.env" 
+
+# with Huggingface model
+export CHROMA_HF_MODEL="hf-model-name"
 ```
 
 #### Embedding Function Environment Variables
