@@ -10,13 +10,13 @@ import ssl
 import uuid
 import time
 import json
-from typing_extensions import TypedDict
+from typing import TypedDict
 
 
 from chromadb.api.collection_configuration import (
     CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration, UpdateCollectionConfiguration
     )
-from chromadb.api import EmbeddingFunction
+from chromadb.api.types import EmbeddingFunction
 from chromadb.utils.embedding_functions import (
     DefaultEmbeddingFunction,
     CohereEmbeddingFunction,
@@ -25,6 +25,8 @@ from chromadb.utils.embedding_functions import (
     VoyageAIEmbeddingFunction,
     RoboflowEmbeddingFunction,
 )
+
+from chroma_mcp.embedding.local_huggingface import HuggingFaceLocalEmbeddingFunction
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
@@ -173,6 +175,7 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
     "jina": JinaEmbeddingFunction,
     "voyageai": VoyageAIEmbeddingFunction,
     "roboflow": RoboflowEmbeddingFunction,
+    "local_huggingface": HuggingFaceLocalEmbeddingFunction,  # Placeholder for local HuggingFace embedding function
 }
 @mcp.tool()
 async def chroma_create_collection(

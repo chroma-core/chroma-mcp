@@ -25,6 +25,7 @@ dependencies = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
     "python-dotenv>=0.19.0",
+    "sentence-transformers>=4.1.0",
     "typing-extensions>=4.13.1",
     "voyageai>=0.3.2",
 ]
