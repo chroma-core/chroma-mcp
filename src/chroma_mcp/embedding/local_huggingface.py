@@ -20,14 +20,12 @@ class HuggingFaceLocalEmbeddingFunction(EmbeddingFunction[Documents]):
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        model_name: str = os.getenv('CHROMA_HF_MODEL',  "sentence-transformers/all-MiniLM-L6-v2" )
     ):
         """
         Initialize the HuggingFaceEmbeddingFunction.
 
         Args:
-            api_key_env_var (str, optional): Environment variable name that contains your API key for the HuggingFace API.
-                Defaults to "CHROMA_HUGGINGFACE_API_KEY".
             model_name (str, optional): The name of the model to use for text embeddings.
                 Defaults to "sentence-transformers/all-MiniLM-L6-v2".
         """
