@@ -7,6 +7,10 @@
     The fastest way to build Python or JavaScript LLM apps with memory!
 </p>
 
+<a href="https://glama.ai/mcp/servers/@chroma-core/chroma-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@chroma-core/chroma-mcp/badge" alt="Chroma Server MCP server" />
+</a>
+
 <p align="center">
   <a href="https://discord.gg/MMeYNTmh3x" target="_blank">
       <img src="https://img.shields.io/discord/1073293645303795742?cacheSeconds=3600" alt="Discord">
