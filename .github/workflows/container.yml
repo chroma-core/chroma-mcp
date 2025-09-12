@@ -1,0 +1,56 @@
+name: Container Next
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to ghcr.io
+        run: podman login --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          # Extract tag name or use 'latest' for main branch
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=latest
+          fi
+          
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
+          echo "tags=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build container image
+        run: |
+          podman build \
+            --tag ${{ steps.meta.outputs.tags }} \
+            --file Dockerfile \
+            .
+
+      - name: Push container image
+        run: |
+          podman push ${{ steps.meta.outputs.tags }}
+
+      - name: Output image details
+        run: |
+          echo "Image pushed: ${{ steps.meta.outputs.tags }}"
+          echo "Version: ${{ steps.meta.outputs.version }}"
