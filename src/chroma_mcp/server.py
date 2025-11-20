@@ -1,6 +1,7 @@
 from typing import Dict, List, TypedDict, Union
 from enum import Enum
 import chromadb
+import logging
 from mcp.server.fastmcp import FastMCP
 import os
 from dotenv import load_dotenv
@@ -31,6 +32,7 @@ mcp = FastMCP("chroma")
 
 # Global variables
 _chroma_client = None
+logger = logging.getLogger(__name__)
 
 def create_parser():
     """Create and return the argument parser."""
@@ -67,6 +69,10 @@ def create_parser():
     parser.add_argument('--dotenv-path', 
                        help='Path to .env file', 
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
+    parser.add_argument('--log-level',
+                       help='Set Log level',
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                       default=os.getenv('CHROMA_LOG_LEVEL', 'INFO'))
     return parser
 
 def get_chroma_client(args=None):
@@ -100,10 +106,10 @@ def get_chroma_client(args=None):
                     settings=settings
                 )
             except ssl.SSLError as e:
-                print(f"SSL connection failed: {str(e)}")
+                logger.exception("SSL connection failed: %s", e)
                 raise
             except Exception as e:
-                print(f"Error connecting to HTTP client: {str(e)}")
+                logger.exception("Error connecting to HTTP client: %s", e)
                 raise
             
         elif args.client_type == 'cloud':
@@ -125,10 +131,10 @@ def get_chroma_client(args=None):
                     }
                 )
             except ssl.SSLError as e:
-                print(f"SSL connection failed: {str(e)}")
+                logger.exception("SSL connection failed: %s", e)
                 raise
             except Exception as e:
-                print(f"Error connecting to cloud client: {str(e)}")
+                logger.exception("Error connecting to cloud client: %s", e)
                 raise
                 
         elif args.client_type == 'persistent':
@@ -640,7 +646,11 @@ def main():
         # re-parse args to read the updated environment variables
         parser = create_parser()
         args = parser.parse_args()
-    
+    # Configure logging
+    logging.basicConfig(
+        level=logging, args.log_level.upper(),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     # Validate required arguments based on client type
     if args.client_type == 'http':
         if not args.host:
@@ -657,13 +667,13 @@ def main():
     # Initialize client with parsed args
     try:
         get_chroma_client(args)
-        print("Successfully initialized Chroma client")
+        logger.info("Successfully initialized Chroma client")
     except Exception as e:
-        print(f"Failed to initialize Chroma client: {str(e)}")
+        logger.exception("Failed to initialize Chroma client: %s", e)
         raise
     
     # Initialize and run the server
-    print("Starting MCP server")
+    logger.info("Starting MCP server")
     mcp.run(transport='stdio')
     
 if __name__ == "__main__":
