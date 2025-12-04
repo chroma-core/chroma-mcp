@@ -32,6 +32,10 @@ mcp = FastMCP("chroma")
 # Global variables
 _chroma_client = None
 
+def is_truthy(value: str) -> bool:
+    """Convert string value to boolean."""
+    return value.lower() in ['true', 'yes', '1', 't', 'y']
+
 def create_parser():
     """Create and return the argument parser."""
     parser = argparse.ArgumentParser(description='FastMCP server for Chroma DB')
@@ -60,12 +64,16 @@ def create_parser():
     parser.add_argument('--api-key', 
                        help='Chroma API key (required if tenant is provided)', 
                        default=os.getenv('CHROMA_API_KEY'))
-    parser.add_argument('--ssl', 
-                       help='Use SSL (optional for http client)', 
-                       type=lambda x: x.lower() in ['true', 'yes', '1', 't', 'y'],
-                       default=os.getenv('CHROMA_SSL', 'true').lower() in ['true', 'yes', '1', 't', 'y'])
-    parser.add_argument('--dotenv-path', 
-                       help='Path to .env file', 
+    parser.add_argument('--ssl',
+                       help='Use SSL (optional for http client)',
+                       type=is_truthy,
+                       default=is_truthy(os.getenv('CHROMA_SSL', 'true')))
+    parser.add_argument('--no-ssl-verify',
+                       help='Disable SSL certificate verification',
+                       action='store_true',
+                       default=is_truthy(os.getenv('CHROMA_NO_SSL_VERIFY', 'false')))
+    parser.add_argument('--dotenv-path',
+                       help='Path to .env file',
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
     return parser
 
@@ -83,13 +91,17 @@ def get_chroma_client(args=None):
         if args.client_type == 'http':
             if not args.host:
                 raise ValueError("Host must be provided via --host flag or CHROMA_HOST environment variable when using HTTP client")
-            
-            settings = Settings()
+
+            # Build settings dict
+            settings_dict = {}
+            if args.no_ssl_verify:
+                settings_dict["chroma_server_ssl_verify"] = False
+
             if args.custom_auth_credentials:
-                settings = Settings(
-                    chroma_client_auth_provider="chromadb.auth.basic_authn.BasicAuthClientProvider",
-                    chroma_client_auth_credentials=args.custom_auth_credentials
-                )
+                settings_dict["chroma_client_auth_provider"] = "chromadb.auth.basic_authn.BasicAuthClientProvider"
+                settings_dict["chroma_client_auth_credentials"] = args.custom_auth_credentials
+
+            settings = Settings(**settings_dict)
             
             # Handle SSL configuration
             try:
