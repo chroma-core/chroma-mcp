@@ -32,6 +32,10 @@ mcp = FastMCP("chroma")
 # Global variables
 _chroma_client = None
 
+def is_truthy(value: str) -> bool:
+    """Convert string value to boolean."""
+    return value.lower() in ['true', 'yes', '1', 't', 'y']
+
 def create_parser():
     """Create and return the argument parser."""
     parser = argparse.ArgumentParser(description='FastMCP server for Chroma DB')
@@ -62,12 +66,12 @@ def create_parser():
                        default=os.getenv('CHROMA_API_KEY'))
     parser.add_argument('--ssl',
                        help='Use SSL (optional for http client)',
-                       type=lambda x: x.lower() in ['true', 'yes', '1', 't', 'y'],
-                       default=os.getenv('CHROMA_SSL', 'true').lower() in ['true', 'yes', '1', 't', 'y'])
+                       type=is_truthy,
+                       default=is_truthy(os.getenv('CHROMA_SSL', 'true')))
     parser.add_argument('--ssl-verify',
                        help='Verify SSL certificates (optional for http client)',
-                       type=lambda x: x.lower() in ['true', 'yes', '1', 't', 'y'],
-                       default=os.getenv('CHROMA_SSL_VERIFY', 'true').lower() in ['true', 'yes', '1', 't', 'y'])
+                       type=is_truthy,
+                       default=is_truthy(os.getenv('CHROMA_SSL_VERIFY', 'true')))
     parser.add_argument('--dotenv-path',
                        help='Path to .env file',
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
