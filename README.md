@@ -146,14 +146,12 @@ production/deployment), add the following to your `claude_desktop_config.json` f
       "--custom-auth-credentials",
       "your-custom-auth-credentials",
       "--ssl",
-      "true",
-      "--ssl-verify",
       "true"
     ]
 }
 ```
 
-This will create an HTTP client that connects to your self-hosted Chroma instance. You can set `--ssl-verify` to `false` if you need to disable SSL certificate verification (e.g., when using self-signed certificates).
+This will create an HTTP client that connects to your self-hosted Chroma instance. Add `--no-ssl-verify` flag if you need to disable SSL certificate verification (e.g., when using self-signed certificates).
 
 ### Demos
 
@@ -180,7 +178,7 @@ export CHROMA_HOST="your-host"
 export CHROMA_PORT="your-port"
 export CHROMA_CUSTOM_AUTH_CREDENTIALS="your-custom-auth-credentials"
 export CHROMA_SSL="true"
-export CHROMA_SSL_VERIFY="true"  # Set to "false" to disable SSL certificate verification
+export CHROMA_NO_SSL_VERIFY="true"  # Set to "true" to disable SSL certificate verification
 
 # Optional: Specify path to .env file (defaults to .chroma_env)
 export CHROMA_DOTENV_PATH="/path/to/your/.env" 
