@@ -68,10 +68,11 @@ def create_parser():
                        help='Use SSL (optional for http client)',
                        type=is_truthy,
                        default=is_truthy(os.getenv('CHROMA_SSL', 'true')))
+    ssl_verify_env = os.getenv('CHROMA_SSL_VERIFY')
     parser.add_argument('--ssl-verify',
                        help='Verify SSL certificates (optional for http client)',
                        type=is_truthy,
-                       default=is_truthy(os.getenv('CHROMA_SSL_VERIFY', 'true')))
+                       default=is_truthy(ssl_verify_env) if ssl_verify_env else None)
     parser.add_argument('--dotenv-path',
                        help='Path to .env file',
                        default=os.getenv('CHROMA_DOTENV_PATH', '.chroma_env'))
@@ -94,7 +95,8 @@ def get_chroma_client(args=None):
 
             # Build settings dict
             settings_dict = {}
-            settings_dict["chroma_server_ssl_verify"] = args.ssl_verify
+            if args.ssl_verify is not None:
+                settings_dict["chroma_server_ssl_verify"] = args.ssl_verify
 
             if args.custom_auth_credentials:
                 settings_dict["chroma_client_auth_provider"] = "chromadb.auth.basic_authn.BasicAuthClientProvider"
