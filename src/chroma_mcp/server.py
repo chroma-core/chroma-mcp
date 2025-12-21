@@ -142,7 +142,7 @@ def get_chroma_client(args=None):
 
 ##### Collection Tools #####
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_list_collections(
     limit: int | None = None,
     offset: int | None = None
@@ -176,7 +176,7 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
     "voyageai": VoyageAIEmbeddingFunction,
     "roboflow": RoboflowEmbeddingFunction,
 }
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False})
 async def chroma_create_collection(
     collection_name: str,
     embedding_function_name: str = "default",
@@ -208,7 +208,7 @@ async def chroma_create_collection(
     except Exception as e:
         raise Exception(f"Failed to create collection '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_peek_collection(
     collection_name: str,
     limit: int = 5
@@ -227,7 +227,7 @@ async def chroma_peek_collection(
     except Exception as e:
         raise Exception(f"Failed to peek collection '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_get_collection_info(collection_name: str) -> Dict:
     """Get information about a Chroma collection.
     
@@ -252,7 +252,7 @@ async def chroma_get_collection_info(collection_name: str) -> Dict:
     except Exception as e:
         raise Exception(f"Failed to get collection info for '{collection_name}': {str(e)}") from e
     
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_get_collection_count(collection_name: str) -> int:
     """Get the number of documents in a Chroma collection.
     
@@ -266,7 +266,7 @@ async def chroma_get_collection_count(collection_name: str) -> int:
     except Exception as e:
         raise Exception(f"Failed to get collection count for '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False})
 async def chroma_modify_collection(
     collection_name: str,
     new_name: str | None = None,
@@ -294,7 +294,7 @@ async def chroma_modify_collection(
     except Exception as e:
         raise Exception(f"Failed to modify collection '{collection_name}': {str(e)}") from e
     
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False})
 async def chroma_fork_collection(
     collection_name: str,
     new_collection_name: str,
@@ -314,7 +314,7 @@ async def chroma_fork_collection(
     except Exception as e:
         raise Exception(f"Failed to fork collection '{collection_name}': {str(e)}") from e
     
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True})
 async def chroma_delete_collection(collection_name: str) -> str:
     """Delete a Chroma collection.
     
@@ -329,7 +329,7 @@ async def chroma_delete_collection(collection_name: str) -> str:
         raise Exception(f"Failed to delete collection '{collection_name}': {str(e)}") from e
 
 ##### Document Tools #####
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False})
 async def chroma_add_documents(
     collection_name: str,
     documents: List[str],
@@ -392,7 +392,7 @@ async def chroma_add_documents(
     except Exception as e:
         raise Exception(f"Failed to add documents to collection '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_query_documents(
     collection_name: str,
     query_texts: List[str],
@@ -439,7 +439,7 @@ async def chroma_query_documents(
     except Exception as e:
         raise Exception(f"Failed to query documents from collection '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def chroma_get_documents(
     collection_name: str,
     ids: List[str] | None = None,
@@ -489,7 +489,7 @@ async def chroma_get_documents(
     except Exception as e:
         raise Exception(f"Failed to get documents from collection '{collection_name}': {str(e)}") from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False})
 async def chroma_update_documents(
     collection_name: str,
     ids: List[str],
@@ -564,7 +564,7 @@ async def chroma_update_documents(
             f"Failed to update documents in collection '{collection_name}': {str(e)}"
         ) from e
 
-@mcp.tool()
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True})
 async def chroma_delete_documents(
     collection_name: str,
     ids: List[str]
