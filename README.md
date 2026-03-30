@@ -32,6 +32,10 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 
 This is a MCP server for self-hosting your access to Chroma. If you are looking for [Package Search](https://www.trychroma.com/package-search) you can find the repository for that [here](https://github.com/chroma-core/package-search).
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/chroma-core-chroma-mcp).
+
 ## Features
 
 - **Flexible Client Types**
