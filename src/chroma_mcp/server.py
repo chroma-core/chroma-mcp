@@ -24,6 +24,8 @@ from chromadb.utils.embedding_functions import (
     JinaEmbeddingFunction,
     VoyageAIEmbeddingFunction,
     RoboflowEmbeddingFunction,
+    OllamaEmbeddingFunction,
+    SentenceTransformerEmbeddingFunction,
 )
 
 # Initialize FastMCP server
@@ -175,6 +177,8 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
     "jina": JinaEmbeddingFunction,
     "voyageai": VoyageAIEmbeddingFunction,
     "roboflow": RoboflowEmbeddingFunction,
+    "ollama": OllamaEmbeddingFunction,
+    "sentence_transformer": SentenceTransformerEmbeddingFunction,
 }
 @mcp.tool()
 async def chroma_create_collection(
@@ -186,7 +190,7 @@ async def chroma_create_collection(
     
     Args:
         collection_name: Name of the collection to create
-        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'roboflow', 'ollama', 'sentence_transformer'
         metadata: Optional metadata dict to add to the collection
     """
     client = get_chroma_client()
