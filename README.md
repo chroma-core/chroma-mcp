@@ -153,6 +153,46 @@ production/deployment), add the following to your `claude_desktop_config.json` f
 
 This will create an HTTP client that connects to your self-hosted Chroma instance.
 
+## Usage with Kiro
+
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=chroma&config=%7B%22command%22%3A%20%22uvx%22%2C%20%22args%22%3A%20%5B%22chroma-mcp%22%5D%7D)
+
+Or add the following to your Kiro MCP config file (`~/.kiro/settings/mcp.json` for global, or `.kiro/settings/mcp.json` for project-scoped). See the [Kiro MCP documentation](https://kiro.dev/docs/mcp/) for more details.
+
+1. To add an ephemeral client:
+
+```json
+{
+  "mcpServers": {
+    "chroma": {
+      "command": "uvx",
+      "args": [
+        "chroma-mcp"
+      ]
+    }
+  }
+}
+```
+
+2. To add a persistent client:
+
+```json
+{
+  "mcpServers": {
+    "chroma": {
+      "command": "uvx",
+      "args": [
+        "chroma-mcp",
+        "--client-type",
+        "persistent",
+        "--data-dir",
+        "/full/path/to/your/data/directory"
+      ]
+    }
+  }
+}
+```
+
 ### Demos
 
 Find reference usages, such as shared knowledge bases & adding memory to context windows in the [Chroma MCP Docs](https://docs.trychroma.com/integrations/frameworks/anthropic-mcp#using-chroma-with-claude)
