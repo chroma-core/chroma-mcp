@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import argparse
 from chromadb.config import Settings
 import ssl
+import sys
 import uuid
 import time
 import json
@@ -100,10 +101,10 @@ def get_chroma_client(args=None):
                     settings=settings
                 )
             except ssl.SSLError as e:
-                print(f"SSL connection failed: {str(e)}")
+                print(f"SSL connection failed: {str(e)}", file=sys.stderr)
                 raise
             except Exception as e:
-                print(f"Error connecting to HTTP client: {str(e)}")
+                print(f"Error connecting to HTTP client: {str(e)}", file=sys.stderr)
                 raise
             
         elif args.client_type == 'cloud':
@@ -125,10 +126,10 @@ def get_chroma_client(args=None):
                     }
                 )
             except ssl.SSLError as e:
-                print(f"SSL connection failed: {str(e)}")
+                print(f"SSL connection failed: {str(e)}", file=sys.stderr)
                 raise
             except Exception as e:
-                print(f"Error connecting to cloud client: {str(e)}")
+                print(f"Error connecting to cloud client: {str(e)}", file=sys.stderr)
                 raise
                 
         elif args.client_type == 'persistent':
@@ -657,13 +658,13 @@ def main():
     # Initialize client with parsed args
     try:
         get_chroma_client(args)
-        print("Successfully initialized Chroma client")
+        print("Successfully initialized Chroma client", file=sys.stderr)
     except Exception as e:
-        print(f"Failed to initialize Chroma client: {str(e)}")
+        print(f"Failed to initialize Chroma client: {str(e)}", file=sys.stderr)
         raise
     
     # Initialize and run the server
-    print("Starting MCP server")
+    print("Starting MCP server", file=sys.stderr)
     mcp.run(transport='stdio')
     
 if __name__ == "__main__":
