@@ -1,5 +1,6 @@
 from typing import Dict, List, TypedDict, Union
 from enum import Enum
+from functools import partial
 import chromadb
 from mcp.server.fastmcp import FastMCP
 import os
@@ -24,6 +25,7 @@ from chromadb.utils.embedding_functions import (
     JinaEmbeddingFunction,
     VoyageAIEmbeddingFunction,
     RoboflowEmbeddingFunction,
+    SentenceTransformerEmbeddingFunction,
 )
 
 # Initialize FastMCP server
@@ -170,6 +172,10 @@ async def chroma_list_collections(
 
 mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
     "default": DefaultEmbeddingFunction,
+    "multilingual": partial(
+        SentenceTransformerEmbeddingFunction,
+        model_name="paraphrase-multilingual-MiniLM-L12-v2",
+    ),
     "cohere": CohereEmbeddingFunction,
     "openai": OpenAIEmbeddingFunction,
     "jina": JinaEmbeddingFunction,
@@ -186,7 +192,10 @@ async def chroma_create_collection(
     
     Args:
         collection_name: Name of the collection to create
-        embedding_function_name: Name of the embedding function to use. Options: 'default', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'
+        embedding_function_name: Name of the embedding function to use. Options: 'default', 'multilingual', 'cohere', 'openai', 'jina', 'voyageai', 'ollama', 'roboflow'.
+            'default' runs all-MiniLM-L6-v2 locally and is tuned for English.
+            'multilingual' runs paraphrase-multilingual-MiniLM-L12-v2 locally — same
+            384 dimensions, but with substantially better retrieval on non-English text.
         metadata: Optional metadata dict to add to the collection
     """
     client = get_chroma_client()
