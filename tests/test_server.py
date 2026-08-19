@@ -911,3 +911,83 @@ async def test_get_documents_collection_not_found():
             "collection_name": "non_existent_collection",
             "ids": ["doc1"]
         })
+
+
+@pytest.mark.asyncio
+async def test_get_documents_preserves_non_ascii_characters():
+    collection_name = "test_non_ascii_retrieval"
+    documents = ["你好 Chroma", "рыхлым", "café"]
+    ids = ["doc1", "doc2", "doc3"]
+
+    try:
+        # Create collection
+        await mcp.call_tool(
+            "chroma_create_collection",
+            {"collection_name": collection_name},
+        )
+
+        # Add non-ASCII documents
+        await mcp.call_tool(
+            "chroma_add_documents",
+            {
+                "collection_name": collection_name,
+                "documents": documents,
+                "ids": ids,
+            },
+        )
+
+        # Verify Chroma itself preserves the original Unicode text
+        client = get_chroma_client()
+        collection = client.get_collection(collection_name)
+
+        direct_result = collection.get(
+            ids=ids,
+            include=["documents"],
+        )
+
+        assert "你好 Chroma" in direct_result["documents"]
+        assert "рыхлым" in direct_result["documents"]
+        assert "café" in direct_result["documents"]
+
+        # Verify chroma_get_documents preserves Unicode through MCP
+        get_result = await mcp.call_tool(
+            "chroma_get_documents",
+            {
+                "collection_name": collection_name,
+                "ids": ids,
+                "include": ["documents"],
+            },
+        )
+
+        assert len(get_result) == 1
+
+        get_text = get_result[0].text
+
+        assert "你好 Chroma" in get_text
+        assert "рыхлым" in get_text
+        assert "café" in get_text
+
+        # Verify chroma_query_documents preserves Unicode through MCP
+        query_result = await mcp.call_tool(
+            "chroma_query_documents",
+            {
+                "collection_name": collection_name,
+                "query_texts": ["你好 Chroma"],
+                "n_results": 3,
+                "include": ["documents"],
+            },
+        )
+
+        assert len(query_result) == 1
+
+        query_text = query_result[0].text
+
+        assert "你好 Chroma" in query_text
+        assert "рыхлым" in query_text
+        assert "café" in query_text
+
+    finally:
+        await mcp.call_tool(
+            "chroma_delete_collection",
+            {"collection_name": collection_name},
+        )
