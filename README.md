@@ -24,7 +24,7 @@
 
 # Chroma MCP Server
 
-[![smithery badge](https://smithery.ai/badge/@chroma-core/chroma-mcp)](https://smithery.ai/server/@chroma-core/chroma-mcp)
+[![Listed on Skillselion](https://skillselion.com/badge/mcp/tool/io.github.chroma-core/chroma-mcp.svg)](https://skillselion.com/mcp/tool/io.github.chroma-core/chroma-mcp)
 
 [The Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open protocol designed for effortless integration between LLM applications and external data sources or tools, offering a standardized framework to seamlessly provide LLMs with the context they require.
 
