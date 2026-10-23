@@ -11,6 +11,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -20,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Login to ghcr.io
         run: podman login --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
