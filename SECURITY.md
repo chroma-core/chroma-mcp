@@ -4,11 +4,12 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.2.x   | :white_check_mark: |
 | 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Chroma MCP, please send an email to [your-email]. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within Chroma MCP, please send an email to support@trychroma.com. All security vulnerabilities will be promptly addressed.
 
 Please do not publicly disclose the issue until it has been addressed by the maintainers.
 
