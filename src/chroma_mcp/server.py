@@ -1,7 +1,8 @@
-from typing import Dict, List, TypedDict, Union
+from typing import Annotated, Dict, List, TypedDict, Union
 from enum import Enum
 import chromadb
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 import os
 from dotenv import load_dotenv
 import argparse
@@ -144,8 +145,14 @@ def get_chroma_client(args=None):
 
 @mcp.tool()
 async def chroma_list_collections(
-    limit: int | None = None,
-    offset: int | None = None
+    limit: Annotated[
+        int | None,
+        Field(description="Maximum number of collections to return."),
+    ] = None,
+    offset: Annotated[
+        int | None,
+        Field(description="Number of collections to skip before returning results."),
+    ] = None
 ) -> List[str]:
     """List all collection names in the Chroma database with pagination support.
     
@@ -178,9 +185,21 @@ mcp_known_embedding_functions: Dict[str, EmbeddingFunction] = {
 }
 @mcp.tool()
 async def chroma_create_collection(
-    collection_name: str,
-    embedding_function_name: str = "default",
-    metadata: Dict | None = None,
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to create."),
+    ],
+    embedding_function_name: Annotated[
+        str,
+        Field(
+            description="Name of the embedding function to use for the collection: "
+            "'default', 'cohere', 'openai', 'jina', 'voyageai', or 'roboflow'."
+        ),
+    ] = "default",
+    metadata: Annotated[
+        Dict | None,
+        Field(description="Optional metadata to store with the collection."),
+    ] = None,
 ) -> str:
     """Create a new Chroma collection with configurable HNSW parameters.
     
@@ -210,8 +229,14 @@ async def chroma_create_collection(
 
 @mcp.tool()
 async def chroma_peek_collection(
-    collection_name: str,
-    limit: int = 5
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to peek into."),
+    ],
+    limit: Annotated[
+        int,
+        Field(description="Maximum number of documents to return."),
+    ] = 5
 ) -> Dict:
     """Peek at documents in a Chroma collection.
     
@@ -228,7 +253,12 @@ async def chroma_peek_collection(
         raise Exception(f"Failed to peek collection '{collection_name}': {str(e)}") from e
 
 @mcp.tool()
-async def chroma_get_collection_info(collection_name: str) -> Dict:
+async def chroma_get_collection_info(
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to get information about."),
+    ]
+) -> Dict:
     """Get information about a Chroma collection.
     
     Args:
@@ -253,7 +283,12 @@ async def chroma_get_collection_info(collection_name: str) -> Dict:
         raise Exception(f"Failed to get collection info for '{collection_name}': {str(e)}") from e
     
 @mcp.tool()
-async def chroma_get_collection_count(collection_name: str) -> int:
+async def chroma_get_collection_count(
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to count documents in."),
+    ]
+) -> int:
     """Get the number of documents in a Chroma collection.
     
     Args:
@@ -268,9 +303,18 @@ async def chroma_get_collection_count(collection_name: str) -> int:
 
 @mcp.tool()
 async def chroma_modify_collection(
-    collection_name: str,
-    new_name: str | None = None,
-    new_metadata: Dict | None = None,
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to modify."),
+    ],
+    new_name: Annotated[
+        str | None,
+        Field(description="Optional new name for the collection."),
+    ] = None,
+    new_metadata: Annotated[
+        Dict | None,
+        Field(description="Optional new metadata for the collection."),
+    ] = None,
 ) -> str:
     """Modify a Chroma collection's name or metadata.
     
@@ -296,8 +340,14 @@ async def chroma_modify_collection(
     
 @mcp.tool()
 async def chroma_fork_collection(
-    collection_name: str,
-    new_collection_name: str,
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to fork."),
+    ],
+    new_collection_name: Annotated[
+        str,
+        Field(description="Name of the new collection created by the fork."),
+    ],
 ) -> str:
     """Fork a Chroma collection.
     
@@ -315,7 +365,12 @@ async def chroma_fork_collection(
         raise Exception(f"Failed to fork collection '{collection_name}': {str(e)}") from e
     
 @mcp.tool()
-async def chroma_delete_collection(collection_name: str) -> str:
+async def chroma_delete_collection(
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to delete."),
+    ]
+) -> str:
     """Delete a Chroma collection.
     
     Args:
@@ -331,10 +386,22 @@ async def chroma_delete_collection(collection_name: str) -> str:
 ##### Document Tools #####
 @mcp.tool()
 async def chroma_add_documents(
-    collection_name: str,
-    documents: List[str],
-    ids: List[str],
-    metadatas: List[Dict] | None = None
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to add documents to."),
+    ],
+    documents: Annotated[
+        List[str],
+        Field(description="Text documents to add to the collection."),
+    ],
+    ids: Annotated[
+        List[str],
+        Field(description="Unique IDs for the documents, one per document."),
+    ],
+    metadatas: Annotated[
+        List[Dict] | None,
+        Field(description="Optional metadata dictionaries, one per document."),
+    ] = None
 ) -> str:
     """Add documents to a Chroma collection.
     
@@ -394,12 +461,33 @@ async def chroma_add_documents(
 
 @mcp.tool()
 async def chroma_query_documents(
-    collection_name: str,
-    query_texts: List[str],
-    n_results: int = 5,
-    where: Dict | None = None,
-    where_document: Dict | None = None,
-    include: List[str] = ["documents", "metadatas", "distances"]
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to query."),
+    ],
+    query_texts: Annotated[
+        List[str],
+        Field(description="Query texts to search for similar documents."),
+    ],
+    n_results: Annotated[
+        int,
+        Field(description="Number of results to return per query."),
+    ] = 5,
+    where: Annotated[
+        Dict | None,
+        Field(description="Optional metadata filter using Chroma query operators."),
+    ] = None,
+    where_document: Annotated[
+        Dict | None,
+        Field(description="Optional document content filter using Chroma query operators."),
+    ] = None,
+    include: Annotated[
+        List[str],
+        Field(
+            description="Fields to include in the response, such as "
+            "'documents', 'metadatas', and 'distances'."
+        ),
+    ] = ["documents", "metadatas", "distances"]
 ) -> Dict:
     """Query documents from a Chroma collection with advanced filtering.
     
@@ -441,13 +529,37 @@ async def chroma_query_documents(
 
 @mcp.tool()
 async def chroma_get_documents(
-    collection_name: str,
-    ids: List[str] | None = None,
-    where: Dict | None = None,
-    where_document: Dict | None = None,
-    include: List[str] = ["documents", "metadatas"],
-    limit: int | None = None,
-    offset: int | None = None
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to get documents from."),
+    ],
+    ids: Annotated[
+        List[str] | None,
+        Field(description="Optional document IDs to retrieve."),
+    ] = None,
+    where: Annotated[
+        Dict | None,
+        Field(description="Optional metadata filter using Chroma query operators."),
+    ] = None,
+    where_document: Annotated[
+        Dict | None,
+        Field(description="Optional document content filter using Chroma query operators."),
+    ] = None,
+    include: Annotated[
+        List[str],
+        Field(
+            description="Fields to include in the response, such as "
+            "'documents' and 'metadatas'."
+        ),
+    ] = ["documents", "metadatas"],
+    limit: Annotated[
+        int | None,
+        Field(description="Maximum number of documents to return."),
+    ] = None,
+    offset: Annotated[
+        int | None,
+        Field(description="Number of documents to skip before returning results."),
+    ] = None
 ) -> Dict:
     """Get documents from a Chroma collection with optional filtering.
     
@@ -491,11 +603,26 @@ async def chroma_get_documents(
 
 @mcp.tool()
 async def chroma_update_documents(
-    collection_name: str,
-    ids: List[str],
-    embeddings: List[List[float]] | None = None,
-    metadatas: List[Dict] | None = None,
-    documents: List[str] | None = None
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to update documents in."),
+    ],
+    ids: Annotated[
+        List[str],
+        Field(description="IDs of the documents to update."),
+    ],
+    embeddings: Annotated[
+        List[List[float]] | None,
+        Field(description="Optional new embeddings, one per document ID."),
+    ] = None,
+    metadatas: Annotated[
+        List[Dict] | None,
+        Field(description="Optional new metadata dictionaries, one per document ID."),
+    ] = None,
+    documents: Annotated[
+        List[str] | None,
+        Field(description="Optional new document texts, one per document ID."),
+    ] = None
 ) -> str:
     """Update documents in a Chroma collection.
 
@@ -566,8 +693,14 @@ async def chroma_update_documents(
 
 @mcp.tool()
 async def chroma_delete_documents(
-    collection_name: str,
-    ids: List[str]
+    collection_name: Annotated[
+        str,
+        Field(description="Name of the collection to delete documents from."),
+    ],
+    ids: Annotated[
+        List[str],
+        Field(description="IDs of the documents to delete."),
+    ]
 ) -> str:
     """Delete documents from a Chroma collection.
 
