@@ -361,8 +361,10 @@ async def chroma_add_documents(
     try:
         collection = client.get_or_create_collection(collection_name)
         
-        # Check for duplicate IDs
-        existing_ids = collection.get(include=[])["ids"]
+        # Check for duplicate IDs. Look up only the incoming IDs: fetching every ID in the
+        # collection makes each add O(collection size). The lookup is deduplicated so that a
+        # repeated ID within the batch is still reported by collection.add below.
+        existing_ids = set(collection.get(ids=list(dict.fromkeys(ids)), include=[])["ids"])
         duplicate_ids = [id for id in ids if id in existing_ids]
         
         if duplicate_ids:

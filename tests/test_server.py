@@ -785,6 +785,88 @@ async def test_add_documents_invalid_args():
         await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
 
 @pytest.mark.asyncio
+async def test_add_documents_rejects_existing_ids():
+    """Test that adding an existing ID rejects the whole batch."""
+    collection_name = "test_add_documents_existing_ids"
+    try:
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2"],
+            "ids": ["doc1", "doc2"]
+        })
+
+        # A batch mixing an existing ID with a new one is rejected as a whole
+        existing_error = r"The following IDs already exist in collection .*\['doc2'\]"
+        with pytest.raises(ToolError, match=existing_error):
+            await mcp.call_tool("chroma_add_documents", {
+                "collection_name": collection_name,
+                "documents": ["Test doc 2 again", "Test doc 3"],
+                "ids": ["doc2", "doc3"]
+            })
+
+        count_result = await mcp.call_tool(
+            "chroma_get_collection_count", {"collection_name": collection_name}
+        )
+        assert count_result[0].text == "2"
+
+    finally:
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_add_documents_rejects_duplicate_ids_within_batch():
+    """Test that a batch repeating the same new ID is still rejected by Chroma's add."""
+    collection_name = "test_add_documents_batch_duplicates"
+    try:
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+
+        batch_error = "Expected IDs to be unique, found duplicates of: doc1 in add"
+        with pytest.raises(ToolError, match=batch_error):
+            await mcp.call_tool("chroma_add_documents", {
+                "collection_name": collection_name,
+                "documents": ["Test doc 1", "Test doc 1 again"],
+                "ids": ["doc1", "doc1"]
+            })
+
+    finally:
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
+async def test_add_documents_duplicate_check_only_fetches_batch_ids():
+    """Test that the duplicate check looks up only the incoming IDs, not every ID in the collection.
+
+    Fetching all IDs made each add O(collection size) (#78).
+    """
+    import inspect
+
+    from chromadb.api.models.Collection import Collection
+
+    collection_name = "test_add_documents_batch_lookup"
+    try:
+        await mcp.call_tool("chroma_create_collection", {"collection_name": collection_name})
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": collection_name,
+            "documents": ["Test doc 1", "Test doc 2"],
+            "ids": ["doc1", "doc2"]
+        })
+
+        with patch.object(Collection, "get", autospec=True, side_effect=Collection.get) as get_spy:
+            await mcp.call_tool("chroma_add_documents", {
+                "collection_name": collection_name,
+                "documents": ["Test doc 3", "Test doc 4"],
+                "ids": ["doc3", "doc4"]
+            })
+
+        assert get_spy.call_count >= 1
+        for call in get_spy.call_args_list:
+            requested = inspect.signature(Collection.get).bind(*call.args, **call.kwargs)
+            requested_ids = requested.arguments.get("ids")
+            assert requested_ids is not None and sorted(requested_ids) == ["doc3", "doc4"]
+
+    finally:
+        await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
+
+@pytest.mark.asyncio
 async def test_query_documents_success():
     """Test successful document querying."""
     collection_name = "test_query_documents"
