@@ -765,6 +765,28 @@ async def test_add_documents_success():
         await mcp.call_tool("chroma_delete_collection", {"collection_name": collection_name})
 
 @pytest.mark.asyncio
+async def test_add_documents_checks_only_requested_ids():
+    """Avoid scanning every collection ID when checking a small batch for duplicates."""
+    collection = MagicMock()
+    collection.get.return_value = {"ids": []}
+    client = MagicMock()
+    client.get_or_create_collection.return_value = collection
+
+    with patch("chroma_mcp.server.get_chroma_client", return_value=client):
+        await mcp.call_tool("chroma_add_documents", {
+            "collection_name": "test_add_documents_scoped_lookup",
+            "documents": ["New document"],
+            "ids": ["new_id"],
+        })
+
+    collection.get.assert_called_once_with(ids=["new_id"], include=[])
+    collection.add.assert_called_once_with(
+        documents=["New document"],
+        metadatas=None,
+        ids=["new_id"],
+    )
+
+@pytest.mark.asyncio
 async def test_add_documents_invalid_args():
     """Test adding documents with invalid arguments."""
     collection_name = "test_add_documents_invalid"
