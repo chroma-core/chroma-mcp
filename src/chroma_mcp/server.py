@@ -222,7 +222,10 @@ async def chroma_peek_collection(
     client = get_chroma_client()
     try:
         collection = client.get_collection(collection_name)
-        results = collection.peek(limit=limit)
+        results = collection.get(
+            limit=limit,
+            include=["documents", "metadatas"],
+        )
         return results
     except Exception as e:
         raise Exception(f"Failed to peek collection '{collection_name}': {str(e)}") from e
@@ -242,7 +245,10 @@ async def chroma_get_collection_info(collection_name: str) -> Dict:
         count = collection.count()
         
         # Peek at a few documents
-        peek_results = collection.peek(limit=3)
+        peek_results = collection.get(
+            limit=3,
+            include=["documents", "metadatas"],
+        )
         
         return {
             "name": collection_name,

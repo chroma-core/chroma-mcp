@@ -615,6 +615,8 @@ async def test_peek_collection_success():
         assert "documents" in result[0].text
         assert "ids" in result[0].text
         assert "metadatas" in result[0].text
+        peek_data = json.loads(result[0].text)
+        assert "embeddings" not in peek_data["included"]
         
         # Test peek with custom limit
         limited_result = await mcp.call_tool("chroma_peek_collection", {
@@ -625,6 +627,8 @@ async def test_peek_collection_success():
         assert "documents" in limited_result[0].text
         assert "ids" in limited_result[0].text
         assert "metadatas" in limited_result[0].text
+        limited_data = json.loads(limited_result[0].text)
+        assert "embeddings" not in limited_data["included"]
         
     finally:
         # Clean up
@@ -650,6 +654,8 @@ async def test_get_collection_info_success():
         assert collection_name in result[0].text
         assert "count" in result[0].text
         assert "sample_documents" in result[0].text
+        info_data = json.loads(result[0].text)
+        assert "embeddings" not in info_data["sample_documents"]["included"]
         
     finally:
         # Clean up
